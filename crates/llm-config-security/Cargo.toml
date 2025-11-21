@@ -52,6 +52,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # WASM support
 wasm-bindgen = "0.2"
+getrandom = { version = "0.2", features = ["js"] }
 
 [dev-dependencies]
 tokio-test = "0.4"
