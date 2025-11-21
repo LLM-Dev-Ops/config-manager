@@ -31,6 +31,10 @@ struct Cli {
     /// Disable CORS
     #[arg(long)]
     no_cors: bool,
+
+    /// Disable security middleware
+    #[arg(long)]
+    no_security: bool,
 }
 
 #[tokio::main]
@@ -71,6 +75,7 @@ async fn run(cli: Cli) -> anyhow::Result<()> {
         host: cli.host,
         port: cli.port,
         enable_cors: !cli.no_cors,
+        enable_security: !cli.no_security,
     };
 
     tracing::info!(
@@ -80,6 +85,7 @@ async fn run(cli: Cli) -> anyhow::Result<()> {
     );
     tracing::info!("Storage directory: {}", cli.storage.display());
     tracing::info!("CORS enabled: {}", config.enable_cors);
+    tracing::info!("Security middleware enabled: {}", config.enable_security);
 
     // Start the server
     serve(manager, config).await?;

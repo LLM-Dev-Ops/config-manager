@@ -7,7 +7,6 @@
 //! - Request/response sanitization
 
 use axum::{
-    body::Body,
     extract::{ConnectInfo, Request, State},
     http::{HeaderMap, StatusCode},
     middleware::Next,
