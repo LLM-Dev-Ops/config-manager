@@ -2,13 +2,13 @@
 
 use crate::errors::{SecurityError, SecurityResult};
 use governor::{
-    clock::{Clock, DefaultClock},
+    clock::DefaultClock,
     state::{InMemoryState, NotKeyed},
     Quota, RateLimiter as GovernorRateLimiter,
 };
-use nonzero_ext::*;
 use std::collections::HashMap;
 use std::net::IpAddr;
+use std::num::NonZeroU32;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
@@ -58,21 +58,31 @@ struct IpLimiter {
     last_violation: std::time::Instant,
 }
 
+/// Information about a banned IP address
 #[derive(Debug, Clone)]
-struct BanInfo {
-    banned_at: std::time::Instant,
-    reason: String,
-    violations: usize,
+pub struct BanInfo {
+    /// When the IP was banned
+    pub banned_at: std::time::Instant,
+    /// Reason for the ban
+    pub reason: String,
+    /// Number of violations that led to the ban
+    pub violations: usize,
 }
 
 impl RateLimiter {
     /// Create a new rate limiter
     pub fn new(config: RateLimitConfig) -> Self {
-        let authenticated_quota = Quota::per_second(nonzero!(config.authenticated_rps))
-            .allow_burst(nonzero!(config.burst_size));
+        let authenticated_quota = Quota::per_second(
+            NonZeroU32::new(config.authenticated_rps).unwrap_or(NonZeroU32::new(100).unwrap())
+        ).allow_burst(
+            NonZeroU32::new(config.burst_size).unwrap_or(NonZeroU32::new(50).unwrap())
+        );
 
-        let unauthenticated_quota = Quota::per_second(nonzero!(config.unauthenticated_rps))
-            .allow_burst(nonzero!(config.burst_size / 5));
+        let unauthenticated_quota = Quota::per_second(
+            NonZeroU32::new(config.unauthenticated_rps).unwrap_or(NonZeroU32::new(10).unwrap())
+        ).allow_burst(
+            NonZeroU32::new(config.burst_size / 5).unwrap_or(NonZeroU32::new(10).unwrap())
+        );
 
         Self {
             config,
@@ -116,11 +126,17 @@ impl RateLimiter {
         let mut limiters = self.per_ip_limiters.write().unwrap();
         let ip_limiter = limiters.entry(ip).or_insert_with(|| {
             let quota = if authenticated {
-                Quota::per_second(nonzero!(self.config.authenticated_rps / 10))
+                Quota::per_second(
+                    NonZeroU32::new(self.config.authenticated_rps / 10)
+                        .unwrap_or(NonZeroU32::new(10).unwrap())
+                )
             } else {
-                Quota::per_second(nonzero!(self.config.unauthenticated_rps))
+                Quota::per_second(
+                    NonZeroU32::new(self.config.unauthenticated_rps)
+                        .unwrap_or(NonZeroU32::new(10).unwrap())
+                )
             }
-            .allow_burst(nonzero!(10u32));
+            .allow_burst(NonZeroU32::new(10).unwrap());
 
             IpLimiter {
                 limiter: Arc::new(GovernorRateLimiter::direct(quota)),
@@ -164,8 +180,9 @@ impl RateLimiter {
 
             // Ban if threshold exceeded
             if ip_limiter.violations >= self.config.ban_threshold {
+                let violations = ip_limiter.violations; // Copy before dropping lock
                 drop(limiters); // Release lock
-                self.ban_ip(ip, reason.to_string(), ip_limiter.violations);
+                self.ban_ip(ip, reason.to_string(), violations);
             }
         }
     }
