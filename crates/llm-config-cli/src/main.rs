@@ -3,6 +3,7 @@
 use clap::{Parser, Subcommand, ValueEnum};
 use colored::Colorize;
 use llm_config_core::{ConfigManager, ConfigValue, Environment};
+use llm_config_core::benchmarks;
 use llm_config_crypto::{Algorithm, SecretKey};
 use std::path::PathBuf;
 
@@ -134,6 +135,39 @@ enum Commands {
 
     /// Generate a new encryption key
     Keygen,
+
+    /// Run benchmarks
+    Run {
+        /// Run all benchmarks
+        #[arg(short, long)]
+        all: bool,
+
+        /// Run benchmarks for a specific category (config, cache, crypto, secrets, storage)
+        #[arg(short, long)]
+        category: Option<String>,
+
+        /// Run a specific benchmark by target ID
+        #[arg(short, long)]
+        target: Option<String>,
+
+        /// List available benchmarks
+        #[arg(short, long)]
+        list: bool,
+
+        /// Output directory for benchmark results
+        #[arg(short, long, default_value = ".")]
+        output: PathBuf,
+
+        /// Output format (json, table)
+        #[arg(short, long, value_enum, default_value = "table")]
+        format: BenchOutputFormat,
+    },
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+enum BenchOutputFormat {
+    Table,
+    Json,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
@@ -376,6 +410,99 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             println!("Set this key using:");
             println!("  {} export LLM_CONFIG_KEY=\"{}\"", "•".blue(), key.to_base64());
             println!("  {} llm-config --encryption-key <key> ...", "•".blue());
+        }
+
+        Commands::Run {
+            all,
+            category,
+            target,
+            list,
+            output,
+            format,
+        } => {
+            if list {
+                // List available benchmarks
+                println!("{}", "Available Benchmarks:".green().bold());
+                println!();
+                let bench_list = benchmarks::list_benchmarks();
+                for info in bench_list {
+                    println!("  {} [{}] {}", "•".blue(), info.category.yellow(), info.id.bold());
+                    println!("    {}", info.description);
+                }
+                return Ok(());
+            }
+
+            let results = if let Some(target_id) = target {
+                // Run specific benchmark
+                println!("{}", format!("Running benchmark: {}", target_id).green().bold());
+                match benchmarks::run_benchmark(&target_id) {
+                    Some(result) => vec![result],
+                    None => {
+                        println!("{}", format!("Benchmark '{}' not found", target_id).red());
+                        return Ok(());
+                    }
+                }
+            } else if let Some(cat) = category {
+                // Run benchmarks by category
+                println!("{}", format!("Running {} benchmarks...", cat).green().bold());
+                benchmarks::run_benchmarks_by_category(&cat)
+            } else if all {
+                // Run all benchmarks
+                println!("{}", "Running all benchmarks...".green().bold());
+                benchmarks::run_all_benchmarks()
+            } else {
+                // Default: run all
+                println!("{}", "Running all benchmarks...".green().bold());
+                benchmarks::run_all_benchmarks()
+            };
+
+            if results.is_empty() {
+                println!("{}", "No benchmarks were run.".yellow());
+                return Ok(());
+            }
+
+            // Display results
+            match format {
+                BenchOutputFormat::Table => {
+                    println!();
+                    println!("{}", "Benchmark Results:".green().bold());
+                    println!();
+                    println!("{:<25} {:>15} {:>15}", "Target".bold(), "Duration (ms)".bold(), "Ops/sec".bold());
+                    println!("{}", "-".repeat(60));
+
+                    for result in &results {
+                        let duration_ms = result.metrics
+                            .get("duration_ms")
+                            .and_then(|v| v.as_f64())
+                            .map(|v| format!("{:.3}", v))
+                            .unwrap_or_else(|| "-".to_string());
+
+                        let ops_per_sec = result.metrics
+                            .get("throughput_ops_per_sec")
+                            .and_then(|v| v.as_f64())
+                            .map(|v| format!("{:.2}", v))
+                            .unwrap_or_else(|| "-".to_string());
+
+                        println!("{:<25} {:>15} {:>15}", result.target_id, duration_ms, ops_per_sec);
+                    }
+                    println!();
+                }
+                BenchOutputFormat::Json => {
+                    println!("{}", serde_json::to_string_pretty(&results)?);
+                }
+            }
+
+            // Save results to output directory
+            if let Err(e) = benchmarks::io::write_benchmark_run(&output, &results) {
+                eprintln!("{} Failed to write results: {}", "Warning:".yellow(), e);
+            } else {
+                println!("{} Results saved to {}", "✓".green(), output.join("benchmarks/output").display());
+            }
+
+            // Update summary
+            if let Err(e) = benchmarks::markdown::update_summary(&output) {
+                eprintln!("{} Failed to update summary: {}", "Warning:".yellow(), e);
+            }
         }
     }
 
