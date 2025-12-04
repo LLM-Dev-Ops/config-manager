@@ -5,6 +5,7 @@ pub mod manager;
 pub mod version;
 pub mod error_utils;
 pub mod benchmarks;
+pub mod providers;
 
 pub use config::*;
 pub use manager::*;

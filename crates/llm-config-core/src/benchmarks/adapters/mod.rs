@@ -2,14 +2,15 @@
 //!
 //! This module implements the canonical BenchTarget trait and provides
 //! a registry of all benchmark targets for the Config Manager.
+//!
+//! Note: Cache benchmarks have been moved to the llm-config-cache crate
+//! to avoid circular dependencies in the workspace.
 
 mod config_benchmarks;
-mod cache_benchmarks;
 mod crypto_benchmarks;
 mod storage_benchmarks;
 
 pub use config_benchmarks::*;
-pub use cache_benchmarks::*;
 pub use crypto_benchmarks::*;
 pub use storage_benchmarks::*;
 
@@ -61,6 +62,8 @@ pub trait BenchTarget: Send + Sync {
 ///
 /// Returns a vector of boxed trait objects implementing BenchTarget.
 /// This is the canonical entry point for discovering all available benchmarks.
+///
+/// Note: Cache benchmarks are available in the llm-config-cache crate.
 pub fn all_targets() -> Vec<Box<dyn BenchTarget>> {
     vec![
         // Config Manager benchmarks
@@ -73,13 +76,6 @@ pub fn all_targets() -> Vec<Box<dyn BenchTarget>> {
         // Secret loading benchmarks
         Box::new(SecretSetBenchmark::new()),
         Box::new(SecretGetBenchmark::new()),
-
-        // Cache benchmarks
-        Box::new(CacheL1GetBenchmark::new()),
-        Box::new(CacheL1PutBenchmark::new()),
-        Box::new(CacheL2GetBenchmark::new()),
-        Box::new(CachePromotionBenchmark::new()),
-        Box::new(CacheMixedBenchmark::new()),
 
         // Crypto benchmarks
         Box::new(EncryptBenchmark::new()),

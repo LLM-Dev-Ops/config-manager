@@ -356,15 +356,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_retry_success_after_failures() {
-        let mut attempts = 0;
+        use std::sync::atomic::{AtomicU32, Ordering};
+        let attempts = AtomicU32::new(0);
 
         let result = retry_with_backoff(
-            || async {
-                attempts += 1;
-                if attempts < 3 {
-                    Err("temporary error")
-                } else {
-                    Ok("success")
+            || {
+                let count = attempts.fetch_add(1, Ordering::SeqCst) + 1;
+                async move {
+                    if count < 3 {
+                        Err("temporary error")
+                    } else {
+                        Ok("success")
+                    }
                 }
             },
             RetryPolicy {
@@ -378,17 +381,18 @@ mod tests {
         .await;
 
         assert_eq!(result, Ok("success"));
-        assert_eq!(attempts, 3);
+        assert_eq!(attempts.load(Ordering::SeqCst), 3);
     }
 
     #[tokio::test]
     async fn test_retry_exhausted() {
-        let mut attempts = 0;
+        use std::sync::atomic::{AtomicU32, Ordering};
+        let attempts = AtomicU32::new(0);
 
         let result = retry_with_backoff(
-            || async {
-                attempts += 1;
-                Err::<(), _>("persistent error")
+            || {
+                attempts.fetch_add(1, Ordering::SeqCst);
+                async { Err::<(), _>("persistent error") }
             },
             RetryPolicy {
                 max_attempts: 3,
@@ -401,7 +405,7 @@ mod tests {
         .await;
 
         assert!(result.is_err());
-        assert_eq!(attempts, 3);
+        assert_eq!(attempts.load(Ordering::SeqCst), 3);
     }
 
     #[tokio::test]

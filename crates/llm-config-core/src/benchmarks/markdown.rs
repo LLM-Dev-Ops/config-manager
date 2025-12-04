@@ -48,8 +48,8 @@ pub fn generate_summary(results: &[BenchmarkResult]) -> String {
     let mut sorted_targets: Vec<_> = grouped.keys().collect();
     sorted_targets.sort();
 
-    for target_id in sorted_targets {
-        if let Some(results) = grouped.get(target_id) {
+    for target_id in &sorted_targets {
+        if let Some(results) = grouped.get(*target_id) {
             // Get the latest result for this target
             if let Some(latest) = results.iter().max_by_key(|r| r.timestamp) {
                 let duration_ms = latest
@@ -76,8 +76,8 @@ pub fn generate_summary(results: &[BenchmarkResult]) -> String {
 
     md.push_str("\n## Detailed Results\n\n");
 
-    for target_id in sorted_targets {
-        if let Some(results) = grouped.get(target_id) {
+    for target_id in &sorted_targets {
+        if let Some(results) = grouped.get(*target_id) {
             if let Some(latest) = results.iter().max_by_key(|r| r.timestamp) {
                 md.push_str(&format!("### {}\n\n", target_id));
                 md.push_str("```json\n");
