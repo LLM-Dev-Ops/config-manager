@@ -40,6 +40,7 @@ pub mod keyring;
 pub mod encrypted;
 pub mod bundles;
 pub mod cloud;
+pub mod vault;
 pub mod chain;
 
 // Re-export core types
@@ -56,3 +57,4 @@ pub use cloud::{
     GcpSecretManagerProvider, AzureKeyVaultProvider,
     CloudProviderConfig,
 };
+pub use vault::{VaultProvider, VaultConfig, VaultAuthMethod};
