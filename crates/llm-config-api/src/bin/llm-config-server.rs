@@ -21,11 +21,11 @@ struct Cli {
     encryption_key: Option<String>,
 
     /// Server host
-    #[arg(long, default_value = "127.0.0.1")]
+    #[arg(long, env = "SERVER_HOST", default_value = "0.0.0.0")]
     host: String,
 
     /// Server port
-    #[arg(short, long, default_value = "8080")]
+    #[arg(short, long, env = "SERVER_PORT", default_value = "8080")]
     port: u16,
 
     /// Disable CORS

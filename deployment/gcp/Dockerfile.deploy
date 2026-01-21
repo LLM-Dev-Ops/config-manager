@@ -1,0 +1,62 @@
+# LLM-Config-Manager Production Dockerfile
+# Deploys the unified config service
+
+FROM rust:1.85-slim AS builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy workspace files (Cargo.lock generated during build)
+COPY Cargo.toml ./
+COPY crates ./crates
+
+# Remove bench references that aren't included in docker context
+RUN find /app/crates -name "Cargo.toml" -exec sed -i '/\[\[bench\]\]/,/^$/d' {} \;
+
+# Build release binaries
+RUN cargo build --release -p llm-config-api -p llm-config-cli
+
+# Debug: List what binaries were built
+RUN ls -la /app/target/release/ || true
+
+# Runtime stage
+FROM debian:bookworm-slim
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libssl3 \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd -r -u 1000 -g nogroup appuser
+
+# Copy binaries (llm-config-server from api, llm-config from cli)
+COPY --from=builder /app/target/release/llm-config-server /usr/local/bin/llm-config-server
+COPY --from=builder /app/target/release/llm-config /usr/local/bin/llm-config-cli
+
+# Copy config templates
+COPY config /etc/llm-config/templates
+
+# Set ownership
+RUN chown -R appuser:nogroup /app /etc/llm-config
+
+USER appuser
+
+# Environment defaults
+ENV RUST_LOG=info
+ENV SERVER_HOST=0.0.0.0
+ENV SERVER_PORT=8080
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+EXPOSE 8080
+
+ENTRYPOINT ["/usr/local/bin/llm-config-server"]

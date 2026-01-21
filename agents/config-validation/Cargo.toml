@@ -1,0 +1,67 @@
+[package]
+name = "config-validation"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+authors = ["LLM DevOps Team"]
+license = "Apache-2.0"
+description = "Config Validation Agent with telemetry and DecisionEvent emission"
+repository = "https://github.com/globalbusinessadvisors/llm-config-manager"
+
+# Keep this package out of the root workspace
+[workspace]
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full", "sync", "time"] }
+
+# CLI
+clap = { version = "4.5", features = ["derive", "cargo", "env"] }
+colored = "2.1"
+
+# Web framework (for edge function handler)
+axum = { version = "0.7", features = ["json", "macros"] }
+tower = { version = "0.4", features = ["util"] }
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+toml = "0.8"
+
+# HTTP client
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
+
+# Metrics
+prometheus = { version = "0.13", features = ["process"] }
+
+# Cryptography (for hashing)
+sha2 = "0.10"
+hex = "0.4"
+
+# Utilities
+uuid = { version = "1.6", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+regex = "1.10"
+
+[dev-dependencies]
+tokio-test = "0.4"
+wiremock = "0.5"
+proptest = "1.4"
+
+[[bin]]
+name = "config-validate"
+path = "src/bin/main.rs"
+
+[features]
+default = []
+# Enable mock client for testing
+mock = []
+
+[[test]]
+name = "integration"
+path = "tests/integration.rs"

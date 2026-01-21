@@ -1,0 +1,181 @@
+# =============================================================================
+# LLM-CONFIG-MANAGER UNIFIED SERVICE DEFINITION
+# Google Cloud Run / Edge Functions Deployment
+# =============================================================================
+#
+# SERVICE TOPOLOGY:
+#   - Service Name: llm-config-manager
+#   - All agents deployed as ONE unified service
+#   - NO standalone agent deployments
+#   - Shared runtime, configuration, and telemetry stack
+#
+# AGENT ENDPOINTS:
+#   - /api/v1/discovery/*     -> Config Discovery Agent
+#   - /api/v1/validation/*    -> Config Validation Agent
+#   - /api/v1/compatibility/* -> Config Compatibility Agent
+#   - /api/v1/inspection/*    -> Config Inspection Agent
+#   - /health                 -> Health check
+#   - /metrics                -> Prometheus metrics
+#
+# ARCHITECTURAL CONSTRAINTS:
+#   - Read-only configuration analysis
+#   - NO direct SQL connections
+#   - ALL persistence via ruvector-service
+#   - Stateless execution
+#   - Deterministic behavior
+# =============================================================================
+
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: llm-config-manager
+  namespace: agentics-platform
+  labels:
+    app: llm-config-manager
+    platform: agentics-dev
+    component: config-intelligence
+    tier: analytical
+  annotations:
+    run.googleapis.com/ingress: internal
+    run.googleapis.com/launch-stage: GA
+    autoscaling.knative.dev/minScale: "1"
+    autoscaling.knative.dev/maxScale: "100"
+spec:
+  template:
+    metadata:
+      labels:
+        app: llm-config-manager
+        platform: agentics-dev
+      annotations:
+        run.googleapis.com/execution-environment: gen2
+        run.googleapis.com/cpu-throttling: "false"
+        run.googleapis.com/startup-cpu-boost: "true"
+        autoscaling.knative.dev/target: "80"
+    spec:
+      containerConcurrency: 100
+      timeoutSeconds: 300
+      serviceAccountName: llm-config-manager-sa
+      containers:
+        - name: llm-config-manager
+          image: gcr.io/${PROJECT_ID}/llm-config-manager:${SERVICE_VERSION}
+          ports:
+            - name: http1
+              containerPort: 8080
+          env:
+            # ===========================================
+            # REQUIRED ENVIRONMENT VARIABLES
+            # ===========================================
+
+            # ruvector-service connection (ALL persistence goes here)
+            - name: RUVECTOR_SERVICE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: llm-config-manager-secrets
+                  key: RUVECTOR_SERVICE_URL
+
+            # ruvector-service authentication
+            - name: RUVECTOR_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: llm-config-manager-secrets
+                  key: RUVECTOR_API_KEY
+
+            # Platform environment
+            - name: PLATFORM_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: llm-config-manager-config
+                  key: PLATFORM_ENV
+
+            # Telemetry endpoint (LLM-Observatory)
+            - name: TELEMETRY_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: llm-config-manager-config
+                  key: TELEMETRY_ENDPOINT
+
+            # Service identification
+            - name: SERVICE_NAME
+              value: "llm-config-manager"
+
+            - name: SERVICE_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: llm-config-manager-config
+                  key: SERVICE_VERSION
+
+            # ===========================================
+            # AGENT CONFIGURATION
+            # ===========================================
+
+            # Agent identification
+            - name: AGENT_ID_PREFIX
+              value: "config-manager"
+
+            # agentics-contracts schema version
+            - name: CONTRACTS_SCHEMA_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: llm-config-manager-config
+                  key: CONTRACTS_SCHEMA_VERSION
+
+            # ===========================================
+            # RUNTIME CONFIGURATION
+            # ===========================================
+
+            - name: RUST_LOG
+              value: "info,llm_config=debug"
+
+            - name: SERVER_HOST
+              value: "0.0.0.0"
+
+            - name: SERVER_PORT
+              value: "8080"
+
+            - name: METRICS_PORT
+              value: "9090"
+
+            - name: ENABLE_TELEMETRY
+              value: "true"
+
+            - name: ENABLE_METRICS
+              value: "true"
+
+          resources:
+            limits:
+              cpu: "2"
+              memory: "2Gi"
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 30
+            timeoutSeconds: 3
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 3
+            timeoutSeconds: 3
+
+  traffic:
+    - percent: 100
+      latestRevision: true

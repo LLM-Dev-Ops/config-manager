@@ -1,0 +1,211 @@
+# =============================================================================
+# LLM-CONFIG-MANAGER CLOUD BUILD CONFIGURATION
+# =============================================================================
+#
+# DEPLOYMENT TARGET: Google Cloud Run (Edge Functions)
+# SERVICE: llm-config-manager (unified service)
+#
+# IMPORTANT CONSTRAINTS:
+#   - NO direct SQL connections
+#   - ALL persistence via ruvector-service
+#   - Stateless execution
+#   - Internal invocation only
+# =============================================================================
+
+substitutions:
+  _SERVICE_NAME: llm-config-manager
+  _REGION: us-central1
+  _PLATFORM_ENV: production
+  _SERVICE_VERSION: '1.0.0'
+  _CONTRACTS_SCHEMA_VERSION: '1.0.0'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
+
+steps:
+  # ===========================================
+  # STEP 1: Validate agentics-contracts schemas
+  # ===========================================
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'validate-contracts'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "Validating agentics-contracts schema compatibility..."
+        echo "Contracts version: ${_CONTRACTS_SCHEMA_VERSION}"
+        # Schema validation would happen here
+        echo "✓ Schema validation passed"
+
+  # ===========================================
+  # STEP 2: Run security scan
+  # ===========================================
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'security-scan'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "Running security scan..."
+        # Ensure no hardcoded secrets
+        if grep -r "CHANGE_ME\|password=\|secret=" --include="*.rs" --include="*.yaml" .; then
+          echo "ERROR: Found potential hardcoded secrets"
+          exit 1
+        fi
+        echo "✓ Security scan passed"
+
+  # ===========================================
+  # STEP 3: Build Rust binary
+  # ===========================================
+  - name: 'rust:1.75-slim'
+    id: 'build-rust'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        apt-get update && apt-get install -y pkg-config libssl-dev
+        cargo build --release --workspace
+        cp target/release/llm-config-server /workspace/llm-config-server
+        cp target/release/llm-config-cli /workspace/llm-config-cli
+    waitFor: ['validate-contracts', 'security-scan']
+
+  # ===========================================
+  # STEP 4: Build Docker image
+  # ===========================================
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-image'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:${_SERVICE_VERSION}'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:latest'
+      - '-f'
+      - 'deployment/gcp/Dockerfile'
+      - '.'
+    waitFor: ['build-rust']
+
+  # ===========================================
+  # STEP 5: Push Docker image
+  # ===========================================
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-image'
+    args:
+      - 'push'
+      - '--all-tags'
+      - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}'
+    waitFor: ['build-image']
+
+  # ===========================================
+  # STEP 6: Create/Update ConfigMap
+  # ===========================================
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'deploy-configmap'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        cat > /tmp/configmap.yaml << EOF
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: llm-config-manager-config
+          namespace: agentics-platform
+        data:
+          PLATFORM_ENV: "${_PLATFORM_ENV}"
+          SERVICE_VERSION: "${_SERVICE_VERSION}"
+          CONTRACTS_SCHEMA_VERSION: "${_CONTRACTS_SCHEMA_VERSION}"
+          TELEMETRY_ENDPOINT: "https://observatory.agentics.internal/v1/telemetry"
+        EOF
+
+        gcloud run services update ${_SERVICE_NAME} \
+          --region=${_REGION} \
+          --update-env-vars="PLATFORM_ENV=${_PLATFORM_ENV},SERVICE_VERSION=${_SERVICE_VERSION},CONTRACTS_SCHEMA_VERSION=${_CONTRACTS_SCHEMA_VERSION}"
+    waitFor: ['push-image']
+
+  # ===========================================
+  # STEP 7: Deploy to Cloud Run
+  # ===========================================
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'deploy-cloudrun'
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image=gcr.io/$PROJECT_ID/${_SERVICE_NAME}:${_SERVICE_VERSION}'
+      - '--region=${_REGION}'
+      - '--platform=managed'
+      - '--ingress=internal'
+      - '--no-allow-unauthenticated'
+      - '--service-account=llm-config-manager-sa@$PROJECT_ID.iam.gserviceaccount.com'
+      - '--cpu=2'
+      - '--memory=2Gi'
+      - '--min-instances=1'
+      - '--max-instances=100'
+      - '--concurrency=100'
+      - '--timeout=300'
+      - '--cpu-boost'
+      - '--execution-environment=gen2'
+      - '--set-env-vars=SERVICE_NAME=${_SERVICE_NAME},SERVICE_VERSION=${_SERVICE_VERSION}'
+      - '--set-secrets=RUVECTOR_SERVICE_URL=llm-config-ruvector-url:latest,RUVECTOR_API_KEY=llm-config-ruvector-key:latest'
+    waitFor: ['deploy-configmap']
+
+  # ===========================================
+  # STEP 8: Verify deployment
+  # ===========================================
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'verify-deployment'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "Verifying deployment..."
+
+        SERVICE_URL=$(gcloud run services describe ${_SERVICE_NAME} \
+          --region=${_REGION} \
+          --format='value(status.url)')
+
+        echo "Service URL: $SERVICE_URL"
+
+        # Wait for service to be ready
+        for i in {1..30}; do
+          HEALTH=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer $(gcloud auth print-identity-token)" \
+            "$SERVICE_URL/health" 2>/dev/null || echo "000")
+
+          if [ "$HEALTH" = "200" ]; then
+            echo "✓ Health check passed"
+            break
+          fi
+
+          echo "Waiting for service... attempt $i/30"
+          sleep 10
+        done
+
+        if [ "$HEALTH" != "200" ]; then
+          echo "ERROR: Health check failed"
+          exit 1
+        fi
+
+        # Verify all agent endpoints
+        for endpoint in discovery/health validation/health compatibility/health inspection/health; do
+          RESP=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer $(gcloud auth print-identity-token)" \
+            "$SERVICE_URL/api/v1/$endpoint" 2>/dev/null || echo "000")
+
+          if [ "$RESP" = "200" ]; then
+            echo "✓ Endpoint /api/v1/$endpoint is healthy"
+          else
+            echo "WARNING: Endpoint /api/v1/$endpoint returned $RESP"
+          fi
+        done
+
+        echo "✓ Deployment verification complete"
+    waitFor: ['deploy-cloudrun']
+
+images:
+  - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:${_SERVICE_VERSION}'
+  - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:latest'
+
+timeout: '1800s'

@@ -1,0 +1,128 @@
+# =============================================================================
+# LLM-CONFIG-MANAGER ENVIRONMENT CONFIGURATION
+# =============================================================================
+#
+# This file defines ALL required environment variables for each environment.
+# NO agent hardcodes service names, URLs, or credentials.
+# ALL dependencies resolve via environment variables or Secret Manager.
+#
+# ENVIRONMENTS: dev | staging | prod
+# =============================================================================
+
+# ===========================================
+# DEVELOPMENT ENVIRONMENT
+# ===========================================
+dev:
+  # ruvector-service connection
+  RUVECTOR_SERVICE_URL: "https://ruvector-dev.agentics.internal/v1"
+  RUVECTOR_API_KEY: "${secret:llm-config-ruvector-key-dev}"
+
+  # Platform identification
+  PLATFORM_ENV: "dev"
+  SERVICE_NAME: "llm-config-manager"
+  SERVICE_VERSION: "1.0.0-dev"
+
+  # Telemetry
+  TELEMETRY_ENDPOINT: "https://observatory-dev.agentics.internal/v1/telemetry"
+  ENABLE_TELEMETRY: "true"
+  ENABLE_METRICS: "true"
+  METRICS_PORT: "9090"
+
+  # Contracts
+  CONTRACTS_SCHEMA_VERSION: "1.0.0"
+
+  # Agent configuration
+  AGENT_ID_PREFIX: "config-manager-dev"
+
+  # Runtime
+  RUST_LOG: "debug,llm_config=trace"
+  SERVER_HOST: "0.0.0.0"
+  SERVER_PORT: "8080"
+
+  # Timeouts
+  REQUEST_TIMEOUT_SECONDS: "60"
+  RUVECTOR_TIMEOUT_SECONDS: "30"
+
+# ===========================================
+# STAGING ENVIRONMENT
+# ===========================================
+staging:
+  # ruvector-service connection
+  RUVECTOR_SERVICE_URL: "https://ruvector-staging.agentics.internal/v1"
+  RUVECTOR_API_KEY: "${secret:llm-config-ruvector-key-staging}"
+
+  # Platform identification
+  PLATFORM_ENV: "staging"
+  SERVICE_NAME: "llm-config-manager"
+  SERVICE_VERSION: "1.0.0-rc"
+
+  # Telemetry
+  TELEMETRY_ENDPOINT: "https://observatory-staging.agentics.internal/v1/telemetry"
+  ENABLE_TELEMETRY: "true"
+  ENABLE_METRICS: "true"
+  METRICS_PORT: "9090"
+
+  # Contracts
+  CONTRACTS_SCHEMA_VERSION: "1.0.0"
+
+  # Agent configuration
+  AGENT_ID_PREFIX: "config-manager-staging"
+
+  # Runtime
+  RUST_LOG: "info,llm_config=debug"
+  SERVER_HOST: "0.0.0.0"
+  SERVER_PORT: "8080"
+
+  # Timeouts
+  REQUEST_TIMEOUT_SECONDS: "30"
+  RUVECTOR_TIMEOUT_SECONDS: "15"
+
+# ===========================================
+# PRODUCTION ENVIRONMENT
+# ===========================================
+prod:
+  # ruvector-service connection
+  RUVECTOR_SERVICE_URL: "https://ruvector.agentics.internal/v1"
+  RUVECTOR_API_KEY: "${secret:llm-config-ruvector-key}"
+
+  # Platform identification
+  PLATFORM_ENV: "prod"
+  SERVICE_NAME: "llm-config-manager"
+  SERVICE_VERSION: "1.0.0"
+
+  # Telemetry
+  TELEMETRY_ENDPOINT: "https://observatory.agentics.internal/v1/telemetry"
+  ENABLE_TELEMETRY: "true"
+  ENABLE_METRICS: "true"
+  METRICS_PORT: "9090"
+
+  # Contracts
+  CONTRACTS_SCHEMA_VERSION: "1.0.0"
+
+  # Agent configuration
+  AGENT_ID_PREFIX: "config-manager"
+
+  # Runtime
+  RUST_LOG: "info,llm_config=info"
+  SERVER_HOST: "0.0.0.0"
+  SERVER_PORT: "8080"
+
+  # Timeouts
+  REQUEST_TIMEOUT_SECONDS: "30"
+  RUVECTOR_TIMEOUT_SECONDS: "10"
+
+# ===========================================
+# VARIABLE RESOLUTION RULES
+# ===========================================
+#
+# ${secret:NAME}     -> Resolve from Google Secret Manager
+# ${env:NAME}        -> Resolve from environment variable
+# ${config:NAME}     -> Resolve from ConfigMap
+#
+# NEVER hardcode:
+#   - API keys
+#   - Service URLs
+#   - Credentials
+#   - Mutable state
+#
+# ===========================================
