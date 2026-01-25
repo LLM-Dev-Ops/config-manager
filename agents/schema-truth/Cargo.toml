@@ -1,11 +1,11 @@
 [package]
-name = "config-validation"
+name = "schema-truth"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.83"
 authors = ["LLM DevOps Team"]
 license = "Apache-2.0"
-description = "Config Validation Agent with telemetry and DecisionEvent emission"
+description = "Schema Truth Agent - deterministic schema validation with DecisionEvent emission"
 repository = "https://github.com/globalbusinessadvisors/llm-config-manager"
 
 # Keep this package out of the root workspace
@@ -47,6 +47,7 @@ thiserror = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 regex = "1.10"
+anyhow = "1.0"
 
 [dev-dependencies]
 tokio-test = "0.4"
@@ -54,12 +55,11 @@ wiremock = "0.5"
 proptest = "1.4"
 
 [[bin]]
-name = "config-validate"
+name = "schema-truth"
 path = "src/bin/main.rs"
 
 [features]
 default = []
-# Enable mock client for testing
 mock = []
 
 [[test]]
