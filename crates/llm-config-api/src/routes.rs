@@ -1,5 +1,6 @@
 //! REST API routes
 
+use agentics_span::{ExecutionContextExtractor, ExecutionEnvelope, SpanTreeBuilder};
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
@@ -329,4 +330,141 @@ pub async fn rollback_config(
         .ok_or_else(|| ApiError::NotFound(format!("Version {} not found", version)))?;
 
     Ok(Json(entry.into()))
+}
+
+// ─── Instrumented execution endpoints ────────────────────────────────
+
+/// GET /api/v1/execution/configs/:namespace/:key - Instrumented config retrieval.
+///
+/// Requires `X-Parent-Span-Id` header (rejects with 400 if missing).
+/// Creates repo-level and agent-level execution spans, attaches the
+/// config response as an artifact, and returns the span tree in
+/// an `ExecutionEnvelope`.
+pub async fn execute_get_config(
+    exec_ctx: ExecutionContextExtractor,
+    State(state): State<ApiState>,
+    Path((namespace, key)): Path<(String, String)>,
+    Query(params): Query<GetConfigQuery>,
+) -> Result<Json<ExecutionEnvelope<ConfigResponse>>, Json<ExecutionEnvelope<()>>> {
+    let ctx = exec_ctx.0;
+    let mut tree = SpanTreeBuilder::new(&ctx, "config-manager");
+    let mut agent_span = tree.start_agent_span("config-manager-api");
+
+    let env: Environment = match params
+        .env
+        .as_deref()
+        .unwrap_or("development")
+        .parse()
+    {
+        Ok(e) => e,
+        Err(e) => {
+            agent_span.fail(e.clone());
+            tree.add_completed_agent_span(agent_span);
+            let span_tree = tree.finalize_failed(e.clone());
+            return Err(Json(ExecutionEnvelope::failure(e, span_tree)));
+        }
+    };
+
+    match state.manager.get(&namespace, &key, env) {
+        Ok(Some(entry)) => {
+            let response: ConfigResponse = entry.into();
+            if let Ok(artifact) = serde_json::to_value(&response) {
+                agent_span.attach_artifact(artifact);
+            }
+            agent_span.complete();
+            tree.add_completed_agent_span(agent_span);
+            let span_tree = tree.finalize();
+            Ok(Json(ExecutionEnvelope::success(response, span_tree)))
+        }
+        Ok(None) => {
+            let err = format!("Configuration not found: {}:{}", namespace, key);
+            agent_span.fail(err.clone());
+            tree.add_completed_agent_span(agent_span);
+            let span_tree = tree.finalize_failed(err.clone());
+            Err(Json(ExecutionEnvelope::failure(err, span_tree)))
+        }
+        Err(e) => {
+            let err = e.to_string();
+            agent_span.fail(err.clone());
+            tree.add_completed_agent_span(agent_span);
+            let span_tree = tree.finalize_failed(err.clone());
+            Err(Json(ExecutionEnvelope::failure(err, span_tree)))
+        }
+    }
+}
+
+/// POST /api/v1/execution/configs/:namespace/:key - Instrumented config set.
+///
+/// Requires `X-Parent-Span-Id` header (rejects with 400 if missing).
+/// Creates repo-level and agent-level execution spans, attaches the
+/// config response as an artifact, and returns the span tree in
+/// an `ExecutionEnvelope`.
+pub async fn execute_set_config(
+    exec_ctx: ExecutionContextExtractor,
+    State(state): State<ApiState>,
+    Path((namespace, key)): Path<(String, String)>,
+    Json(req): Json<SetConfigRequest>,
+) -> Result<Json<ExecutionEnvelope<ConfigResponse>>, Json<ExecutionEnvelope<()>>> {
+    let ctx = exec_ctx.0;
+    let mut tree = SpanTreeBuilder::new(&ctx, "config-manager");
+    let mut agent_span = tree.start_agent_span("config-manager-api");
+
+    let env: Environment = match req.env.parse() {
+        Ok(e) => e,
+        Err(e) => {
+            agent_span.fail(e.clone());
+            tree.add_completed_agent_span(agent_span);
+            let span_tree = tree.finalize_failed(e.clone());
+            return Err(Json(ExecutionEnvelope::failure(e, span_tree)));
+        }
+    };
+
+    let result = if req.secret {
+        let value_str = match req.value.as_str() {
+            Some(s) => s,
+            None => {
+                let err = "Secret value must be a string".to_string();
+                agent_span.fail(err.clone());
+                tree.add_completed_agent_span(agent_span);
+                let span_tree = tree.finalize_failed(err.clone());
+                return Err(Json(ExecutionEnvelope::failure(err, span_tree)));
+            }
+        };
+        state
+            .manager
+            .set_secret(&namespace, &key, value_str.as_bytes(), env, &req.user)
+    } else {
+        match json_to_config_value(&req.value) {
+            Ok(config_value) => state
+                .manager
+                .set(&namespace, &key, config_value, env, &req.user),
+            Err(e) => {
+                let err = format!("{:?}", e);
+                agent_span.fail(err.clone());
+                tree.add_completed_agent_span(agent_span);
+                let span_tree = tree.finalize_failed(err.clone());
+                return Err(Json(ExecutionEnvelope::failure(err, span_tree)));
+            }
+        }
+    };
+
+    match result {
+        Ok(entry) => {
+            let response: ConfigResponse = entry.into();
+            if let Ok(artifact) = serde_json::to_value(&response) {
+                agent_span.attach_artifact(artifact);
+            }
+            agent_span.complete();
+            tree.add_completed_agent_span(agent_span);
+            let span_tree = tree.finalize();
+            Ok(Json(ExecutionEnvelope::success(response, span_tree)))
+        }
+        Err(e) => {
+            let err = e.to_string();
+            agent_span.fail(err.clone());
+            tree.add_completed_agent_span(agent_span);
+            let span_tree = tree.finalize_failed(err.clone());
+            Err(Json(ExecutionEnvelope::failure(err, span_tree)))
+        }
+    }
 }

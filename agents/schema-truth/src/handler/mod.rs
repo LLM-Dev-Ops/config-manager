@@ -2,6 +2,7 @@
 //!
 //! Edge function entry point for Cloud Run deployment.
 
+use agentics_span::{ExecutionContextExtractor, ExecutionEnvelope, SpanTreeBuilder};
 use axum::{
     extract::State,
     http::StatusCode,
@@ -44,6 +45,11 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/health", get(health_check))
         .route("/api/v1/schema/validate", post(validate_schema))
         .route("/api/v1/schema/check", post(check_schema))
+        // Instrumented execution endpoint (requires X-Parent-Span-Id header)
+        .route(
+            "/api/v1/execution/schema/validate",
+            post(validate_schema_instrumented),
+        )
         .with_state(state)
 }
 
@@ -133,6 +139,68 @@ async fn check_schema(
         coverage: output.coverage,
         duration_ms: output.duration_ms,
     }))
+}
+
+/// Instrumented schema validation endpoint.
+///
+/// Requires `X-Parent-Span-Id` header (rejects with 400 if missing).
+/// Creates repo-level and agent-level execution spans, attaches the
+/// validation output as an artifact, and returns the span tree in
+/// an `ExecutionEnvelope`.
+async fn validate_schema_instrumented(
+    exec_ctx: ExecutionContextExtractor,
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<ValidateSchemaRequest>,
+) -> Result<
+    Json<ExecutionEnvelope<SchemaValidationOutput>>,
+    (StatusCode, Json<serde_json::Value>),
+> {
+    let ctx = exec_ctx.0;
+    let mut tree = SpanTreeBuilder::new(&ctx, "config-manager");
+    let mut agent_span = tree.start_agent_span("schema-truth");
+
+    // Create input
+    let input = match SchemaValidationEngine::create_input(
+        request.schema,
+        request.requested_by.unwrap_or_else(|| "anonymous".to_string()),
+    ) {
+        Ok(input) => input,
+        Err(e) => {
+            agent_span.fail(e.clone());
+            tree.add_completed_agent_span(agent_span);
+            let span_tree = tree.finalize_failed(e.clone());
+            return Ok(Json(ExecutionEnvelope::failure(e, span_tree)));
+        }
+    };
+
+    let request_id = input.request_id;
+    let inputs_hash = SchemaValidationEngine::compute_inputs_hash(&input);
+
+    // Validate
+    let output = state.engine.validate(&input).await;
+
+    // Emit existing ruvector telemetry (preserved)
+    let signal = SchemaViolationSignal::from_validation(
+        inputs_hash,
+        &output,
+        request_id.to_string(),
+    );
+    if let Err(e) = state.telemetry.emit(signal).await {
+        tracing::warn!("Failed to emit telemetry: {}", e);
+    }
+
+    // Attach output as artifact to agent span
+    if let Ok(artifact) = serde_json::to_value(&output) {
+        agent_span.attach_artifact(artifact);
+    }
+
+    // Agent span is Completed even if schema is invalid —
+    // the agent itself ran successfully, the finding is an artifact.
+    agent_span.complete();
+    tree.add_completed_agent_span(agent_span);
+    let span_tree = tree.finalize();
+
+    Ok(Json(ExecutionEnvelope::success(output, span_tree)))
 }
 
 /// Health response

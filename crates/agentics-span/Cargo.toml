@@ -1,0 +1,16 @@
+[package]
+name = "agentics-span"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+authors = ["LLM DevOps Team"]
+license = "Apache-2.0"
+description = "Execution span types for Agentics Foundational Execution Unit instrumentation"
+repository = "https://github.com/globalbusinessadvisors/llm-config-manager"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.6", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+axum = { version = "0.7", features = ["json"] }

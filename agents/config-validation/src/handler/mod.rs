@@ -28,8 +28,8 @@ pub use middleware::{
     request_logging_middleware, telemetry_middleware, validation_middleware, MiddlewareState,
 };
 pub use routes::{
-    create_router, health_check, inspect_config, validate_config, validation_schema, ApiError,
-    HandlerState,
+    create_router, health_check, inspect_config, validate_config, validate_config_instrumented,
+    validation_schema, ApiError, HandlerState,
 };
 
 use serde::{Deserialize, Serialize};

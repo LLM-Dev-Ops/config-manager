@@ -9,6 +9,7 @@
 //! All routes return machine-readable JSON responses and emit telemetry
 //! compatible with LLM-Observatory.
 
+use agentics_span::{ExecutionContextExtractor, ExecutionEnvelope, SpanTreeBuilder};
 use axum::{
     extract::{Query, State},
     http::StatusCode,
@@ -214,6 +215,8 @@ pub fn create_router(handler_state: HandlerState, middleware_state: MiddlewareSt
         .route("/health", get(health_check))
         .route("/schema", get(validation_schema))
         .route("/schema/:schema_id", get(get_schema_by_id))
+        // Instrumented execution endpoint (requires X-Parent-Span-Id header)
+        .route("/execution/validate", post(validate_config_instrumented))
         // Add state
         .with_state((handler_state, middleware_state))
 }
@@ -268,6 +271,74 @@ pub async fn validate_config(
 
     let response = ApiResponse::success(result, request_id);
     Ok(Json(response))
+}
+
+/// POST /execution/validate - Instrumented configuration validation.
+///
+/// Requires `X-Parent-Span-Id` header (rejects with 400 if missing).
+/// Creates repo-level and agent-level execution spans, attaches the
+/// validation result as an artifact, and returns the span tree in
+/// an `ExecutionEnvelope`.
+pub async fn validate_config_instrumented(
+    exec_ctx: ExecutionContextExtractor,
+    State((state, middleware_state)): State<(HandlerState, MiddlewareState)>,
+    Json(request): Json<ValidationRequest>,
+) -> Result<Json<ExecutionEnvelope<ValidationResult>>, ApiError> {
+    let ctx = exec_ctx.0;
+    let mut tree = SpanTreeBuilder::new(&ctx, "config-manager");
+    let mut agent_span = tree.start_agent_span("config-validation");
+
+    let start_time = Instant::now();
+    let request_id = uuid::Uuid::new_v4().to_string();
+
+    // Emit existing telemetry (preserved)
+    middleware_state.emit_validation_start(&request_id, &request);
+
+    // Determine which schema to use
+    let schema_id = request.schema.as_deref().unwrap_or("llm-config-v1");
+    let schema = match state.schemas.get(schema_id) {
+        Some(s) => s,
+        None => {
+            let err = format!("Schema '{}' not found", schema_id);
+            agent_span.fail(err.clone());
+            tree.add_completed_agent_span(agent_span);
+            let span_tree = tree.finalize_failed(err.clone());
+            return Ok(Json(ExecutionEnvelope::failure(err, span_tree)));
+        }
+    };
+
+    // Perform validation
+    let (errors, warnings) = validate_against_schema(&request.config, schema, &request.options);
+
+    let duration_us = start_time.elapsed().as_micros() as u64;
+
+    let result = ValidationResult {
+        valid: errors.is_empty(),
+        errors,
+        warnings,
+        schema_used: schema_id.to_string(),
+        stats: ValidationStats {
+            fields_validated: count_fields(&request.config),
+            rules_applied: schema.fields.len(),
+            duration_us,
+        },
+    };
+
+    // Emit existing telemetry (preserved)
+    middleware_state.emit_validation_complete(&request_id, &result);
+
+    // Attach result as artifact to agent span
+    if let Ok(artifact) = serde_json::to_value(&result) {
+        agent_span.attach_artifact(artifact);
+    }
+
+    // Agent span is Completed even if validation found errors —
+    // the agent itself ran successfully, the finding is an artifact.
+    agent_span.complete();
+    tree.add_completed_agent_span(agent_span);
+    let span_tree = tree.finalize();
+
+    Ok(Json(ExecutionEnvelope::success(result, span_tree)))
 }
 
 /// POST /inspect - Quick schema inspection

@@ -48,6 +48,9 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 regex = "1.10"
 
+# Agentics execution spans
+agentics-span = { path = "../../crates/agentics-span" }
+
 [dev-dependencies]
 tokio-test = "0.4"
 wiremock = "0.5"

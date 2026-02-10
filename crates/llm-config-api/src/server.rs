@@ -2,8 +2,8 @@
 
 use crate::middleware::{comprehensive_security_middleware, SecurityState};
 use crate::routes::{
-    delete_config, get_config, get_history, health_check, list_configs, rollback_config,
-    set_config, ApiState,
+    delete_config, execute_get_config, execute_set_config, get_config, get_history, health_check,
+    list_configs, rollback_config, set_config, ApiState,
 };
 use axum::{
     middleware,
@@ -52,6 +52,15 @@ pub fn create_router(manager: Arc<ConfigManager>, security_state: SecurityState)
         .route(
             "/configs/:namespace/:key/rollback/:version",
             post(rollback_config),
+        )
+        // Instrumented execution endpoints (require X-Parent-Span-Id header)
+        .route(
+            "/execution/configs/:namespace/:key",
+            get(execute_get_config),
+        )
+        .route(
+            "/execution/configs/:namespace/:key",
+            post(execute_set_config),
         )
         .layer(middleware::from_fn_with_state(
             security_state.clone(),

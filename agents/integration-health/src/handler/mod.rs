@@ -2,6 +2,7 @@
 //!
 //! Edge function entry point for Cloud Run deployment.
 
+use agentics_span::{ExecutionContextExtractor, ExecutionEnvelope, SpanTreeBuilder};
 use axum::{
     extract::State,
     http::StatusCode,
@@ -44,6 +45,11 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/health", get(health_check))
         .route("/api/v1/integration/check", post(check_health))
         .route("/api/v1/integration/probe", post(probe_adapter))
+        // Instrumented execution endpoint (requires X-Parent-Span-Id header)
+        .route(
+            "/api/v1/execution/integration/check",
+            post(check_health_instrumented),
+        )
         .with_state(state)
 }
 
@@ -123,6 +129,73 @@ async fn probe_adapter(
         latency_ms: result.map(|r| r.latency_ms).unwrap_or(0),
         error: result.and_then(|r| r.error.clone()),
     }))
+}
+
+/// Instrumented health check endpoint.
+///
+/// Requires `X-Parent-Span-Id` header (rejects with 400 if missing).
+/// Creates repo-level and agent-level execution spans, attaches the
+/// health check output as an artifact, and returns the span tree in
+/// an `ExecutionEnvelope`.
+async fn check_health_instrumented(
+    exec_ctx: ExecutionContextExtractor,
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<CheckHealthRequest>,
+) -> Result<
+    Json<ExecutionEnvelope<IntegrationHealthOutput>>,
+    (StatusCode, Json<serde_json::Value>),
+> {
+    let ctx = exec_ctx.0;
+    let mut tree = SpanTreeBuilder::new(&ctx, "config-manager");
+    let mut agent_span = tree.start_agent_span("integration-health");
+
+    // Validate adapters
+    if request.adapters.is_empty() {
+        let err = "At least one adapter must be specified".to_string();
+        agent_span.fail(err.clone());
+        tree.add_completed_agent_span(agent_span);
+        let span_tree = tree.finalize_failed(err.clone());
+        return Ok(Json(ExecutionEnvelope::failure(err, span_tree)));
+    }
+
+    // Create input
+    let mut input = HealthCheckEngine::create_input(
+        request.adapters,
+        request.requested_by.unwrap_or_else(|| "anonymous".to_string()),
+    );
+
+    if let Some(opts) = request.options {
+        input.options = opts;
+    }
+
+    let request_id = input.request_id;
+    let inputs_hash = HealthCheckEngine::compute_inputs_hash(&input);
+
+    // Run health checks
+    let output = state.engine.check(&input).await;
+
+    // Emit existing ruvector telemetry (preserved)
+    let signal = IntegrationHealthSignal::from_health_check(
+        inputs_hash,
+        &output,
+        request_id.to_string(),
+    );
+    if let Err(e) = state.telemetry.emit(signal).await {
+        tracing::warn!("Failed to emit telemetry: {}", e);
+    }
+
+    // Attach output as artifact to agent span
+    if let Ok(artifact) = serde_json::to_value(&output) {
+        agent_span.attach_artifact(artifact);
+    }
+
+    // Agent span is Completed even if adapters are unhealthy —
+    // the agent itself ran successfully, the finding is an artifact.
+    agent_span.complete();
+    tree.add_completed_agent_span(agent_span);
+    let span_tree = tree.finalize();
+
+    Ok(Json(ExecutionEnvelope::success(output, span_tree)))
 }
 
 /// Health response

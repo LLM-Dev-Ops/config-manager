@@ -16,6 +16,7 @@ categories = ["web-programming", "config"]
 llm-config-core = { version = "0.5.0", path = "../llm-config-core" }
 llm-config-crypto = { version = "0.5.0", path = "../llm-config-crypto" }
 llm-config-security = { version = "0.5.0", path = "../llm-config-security" }
+agentics-span = { path = "../agentics-span" }
 tokio = { workspace = true }
 axum = { workspace = true }
 tower = { workspace = true }

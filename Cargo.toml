@@ -13,6 +13,7 @@ members = [
     "crates/llm-config-metrics",
     "crates/llm-config-security",
     "crates/llm-config-integration-tests", "crates/llm-config-devtools",
+    "crates/agentics-span",
 ]
 
 [workspace.package]
