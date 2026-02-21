@@ -1,0 +1,52 @@
+# Rust build artifacts
+target/
+Cargo.lock
+
+# Rust source (not needed for Node.js Cloud Function)
+crates/
+agents/
+
+# Deployment configs (not part of function runtime)
+deployment/
+monitoring/
+config/
+
+# Documentation
+docs/
+plans/
+*.md
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Environment / secrets
+.env
+.env.local
+
+# Test artifacts
+*.profraw
+*.profdata
+test/
+
+# Git
+.git/
+.gitignore
+
+# Claude Code / Claude Flow
+.claude/
+.claude-flow/
+CLAUDE.md
+.mcp.json
+.swarm/
+
+# Node dev
+node_modules/
+
+# Cargo workspace
+Cargo.toml

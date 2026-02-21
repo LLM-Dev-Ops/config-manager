@@ -1,5 +1,19 @@
 {
+  "name": "config-manager-agents",
+  "version": "0.5.0",
+  "description": "Config Manager Agents – GCP Cloud Function",
+  "main": "index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "npx @google-cloud/functions-framework --target=handler --port=8080",
+    "test": "node test/handler.test.js"
+  },
   "dependencies": {
     "claude-flow": "^3.0.0-alpha.179"
+  },
+  "devDependencies": {
+    "@google-cloud/functions-framework": "^3.4.0"
   }
 }
