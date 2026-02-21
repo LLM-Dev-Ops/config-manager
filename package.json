@@ -10,10 +10,9 @@
     "start": "npx @google-cloud/functions-framework --target=handler --port=8080",
     "test": "node test/handler.test.js"
   },
-  "dependencies": {
-    "claude-flow": "^3.0.0-alpha.179"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "@google-cloud/functions-framework": "^3.4.0"
+    "@google-cloud/functions-framework": "^3.4.0",
+    "claude-flow": "^3.0.0-alpha.179"
   }
 }
