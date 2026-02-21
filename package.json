@@ -12,7 +12,6 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@google-cloud/functions-framework": "^3.4.0",
-    "claude-flow": "^3.0.0-alpha.179"
+    "@google-cloud/functions-framework": "^3.4.0"
   }
 }
