@@ -1,0 +1,593 @@
+{
+  "contract": {
+    "baselineCommit": "ef60b9c8a9a2e25d0ed72886908c5a0fc1a174e5",
+    "upstreamCommit": "ea287d6ef7548b0b32fa3e20956fa548cfe51edb",
+    "versions": {
+      "metaharness": "0.4.17",
+      "darwin": "0.10.3",
+      "flywheel": "0.1.12"
+    },
+    "modelContract": "No model calls. Deterministic candidate proposed from the reproduced failing case; model/provider and evaluator inputs stay fixed.",
+    "discoveryCase": "toString must return a structured 404 instead of throwing",
+    "holdout": [
+      "constructor",
+      "__proto__",
+      "hasOwnProperty",
+      "valueOf"
+    ],
+    "anchor": [
+      "llm-config-v1",
+      "provider-config-v1",
+      "nonexistent-v1",
+      "health",
+      "existing 15-test suite"
+    ],
+    "primaryMetric": "fraction of holdout HTTP requests returning structured NOT_FOUND and execution metadata",
+    "noopMetric": "fraction of holdout HTTP requests that fail to return the structured response",
+    "gate": "unmodified @metaharness/flywheel meetsPromotionRule; all anchor cases and existing tests must pass",
+    "acceptance": "holdout 4/4, anchor 4/4, existing and expanded tests pass, npm production audit has zero known vulnerabilities",
+    "rollback": "Revert the single implementation commit; the prior direct SCHEMAS lookup is restored.",
+    "scope": "one-line schema lookup hardening in the existing Cloud Function; no Rust, persistence, IAM, deployment, or package publication changes",
+    "darwinBoundary": "real-sandbox repo tests may not distinguish harness variants; Darwin output is reported separately and never substitutes for Flywheel source evaluation"
+  },
+  "sourceSha256": "8ffd88284a6fb53db95831e6fe2c00b1ad85382b89d54c258ba586d6748960ed",
+  "tests": {
+    "baseline": {
+      "exit": 0,
+      "stdout": "config-manager-agents Cloud Function tests\n\n  PASS  OPTIONS returns 204 with CORS headers\n  PASS  GET /health returns healthy status\n  PASS  Health response uses x-correlation-id when provided\n  PASS  POST /v1/config-manager/validate with valid config returns valid=true\n  PASS  POST /v1/config-manager/validate with missing required field returns errors\n  PASS  POST /v1/config-manager/validate with invalid namespace pattern\n  PASS  POST /v1/config-manager/validate with wrong type for namespace\n  PASS  POST /v1/config-manager/validate strict mode warns on unknown fields\n  PASS  POST /v1/config-manager/validate with provider-config-v1 schema\n  PASS  POST /v1/config-manager/validate without config returns 400\n  PASS  POST /v1/config-manager/validate with unknown schema returns 404\n  PASS  GET /v1/config-manager/schemas returns available schemas\n  PASS  Unknown route returns 404 with execution_metadata\n  PASS  execution_metadata includes all required fields\n  PASS  layers_executed contains AGENT_ROUTING layer\n\n15 tests: 15 passed, 0 failed\n\n",
+      "stderr": ""
+    },
+    "candidate": {
+      "exit": 0,
+      "stdout": "config-manager-agents Cloud Function tests\n\n  PASS  OPTIONS returns 204 with CORS headers\n  PASS  GET /health returns healthy status\n  PASS  Health response uses x-correlation-id when provided\n  PASS  POST /v1/config-manager/validate with valid config returns valid=true\n  PASS  POST /v1/config-manager/validate with missing required field returns errors\n  PASS  POST /v1/config-manager/validate with invalid namespace pattern\n  PASS  POST /v1/config-manager/validate with wrong type for namespace\n  PASS  POST /v1/config-manager/validate strict mode warns on unknown fields\n  PASS  POST /v1/config-manager/validate with provider-config-v1 schema\n  PASS  POST /v1/config-manager/validate without config returns 400\n  PASS  POST /v1/config-manager/validate with unknown schema returns 404\n  PASS  POST /v1/config-manager/validate rejects inherited schema 'toString'\n  PASS  POST /v1/config-manager/validate rejects inherited schema 'constructor'\n  PASS  POST /v1/config-manager/validate rejects inherited schema '__proto__'\n  PASS  POST /v1/config-manager/validate rejects inherited schema 'hasOwnProperty'\n  PASS  POST /v1/config-manager/validate rejects inherited schema 'valueOf'\n  PASS  GET /v1/config-manager/schemas returns available schemas\n  PASS  Unknown route returns 404 with execution_metadata\n  PASS  execution_metadata includes all required fields\n  PASS  layers_executed contains AGENT_ROUTING layer\n\n20 tests: 20 passed, 0 failed\n\n",
+      "stderr": ""
+    }
+  },
+  "measurements": [
+    {
+      "sourceSha256": "8c953eb62049880ec3cf67e7bf3c20ce4941e09d86adc704511016253142d813",
+      "suite": "holdout",
+      "score": {
+        "primary": 0,
+        "noopRate": 1,
+        "costPerWin": 0,
+        "regressed": false,
+        "itemWins": [
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "requests": [
+        {
+          "item": "constructor",
+          "status": 500,
+          "passed": false,
+          "milliseconds": 29.091
+        },
+        {
+          "item": "__proto__",
+          "status": 500,
+          "passed": false,
+          "milliseconds": 3.081
+        },
+        {
+          "item": "hasOwnProperty",
+          "status": 500,
+          "passed": false,
+          "milliseconds": 2.99
+        },
+        {
+          "item": "valueOf",
+          "status": 500,
+          "passed": false,
+          "milliseconds": 2.659
+        }
+      ]
+    },
+    {
+      "sourceSha256": "8c953eb62049880ec3cf67e7bf3c20ce4941e09d86adc704511016253142d813",
+      "suite": "anchor",
+      "score": {
+        "primary": 1,
+        "noopRate": 0,
+        "costPerWin": 0,
+        "regressed": false,
+        "itemWins": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      "requests": [
+        {
+          "item": "llm-config-v1",
+          "status": 200,
+          "passed": true,
+          "milliseconds": 6.625
+        },
+        {
+          "item": "provider-config-v1",
+          "status": 200,
+          "passed": true,
+          "milliseconds": 1.993
+        },
+        {
+          "item": "nonexistent-v1",
+          "status": 404,
+          "passed": true,
+          "milliseconds": 2.554
+        },
+        {
+          "item": "health",
+          "status": 200,
+          "passed": true,
+          "milliseconds": 2.541
+        }
+      ]
+    },
+    {
+      "sourceSha256": "8ffd88284a6fb53db95831e6fe2c00b1ad85382b89d54c258ba586d6748960ed",
+      "suite": "holdout",
+      "score": {
+        "primary": 1,
+        "noopRate": 0,
+        "costPerWin": 0,
+        "regressed": false,
+        "itemWins": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      "requests": [
+        {
+          "item": "constructor",
+          "status": 404,
+          "passed": true,
+          "milliseconds": 3.218
+        },
+        {
+          "item": "__proto__",
+          "status": 404,
+          "passed": true,
+          "milliseconds": 1.947
+        },
+        {
+          "item": "hasOwnProperty",
+          "status": 404,
+          "passed": true,
+          "milliseconds": 2.929
+        },
+        {
+          "item": "valueOf",
+          "status": 404,
+          "passed": true,
+          "milliseconds": 2.054
+        }
+      ]
+    },
+    {
+      "sourceSha256": "8ffd88284a6fb53db95831e6fe2c00b1ad85382b89d54c258ba586d6748960ed",
+      "suite": "anchor",
+      "score": {
+        "primary": 1,
+        "noopRate": 0,
+        "costPerWin": 0,
+        "regressed": false,
+        "itemWins": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      "requests": [
+        {
+          "item": "llm-config-v1",
+          "status": 200,
+          "passed": true,
+          "milliseconds": 2.943
+        },
+        {
+          "item": "provider-config-v1",
+          "status": 200,
+          "passed": true,
+          "milliseconds": 2.164
+        },
+        {
+          "item": "nonexistent-v1",
+          "status": 404,
+          "passed": true,
+          "milliseconds": 2.03
+        },
+        {
+          "item": "health",
+          "status": 200,
+          "passed": true,
+          "milliseconds": 1.912
+        }
+      ]
+    },
+    {
+      "sourceSha256": "8ffd88284a6fb53db95831e6fe2c00b1ad85382b89d54c258ba586d6748960ed",
+      "suite": "holdout",
+      "score": {
+        "primary": 1,
+        "noopRate": 0,
+        "costPerWin": 0,
+        "regressed": false,
+        "itemWins": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      "requests": [
+        {
+          "item": "constructor",
+          "status": 404,
+          "passed": true,
+          "milliseconds": 2.226
+        },
+        {
+          "item": "__proto__",
+          "status": 404,
+          "passed": true,
+          "milliseconds": 1.835
+        },
+        {
+          "item": "hasOwnProperty",
+          "status": 404,
+          "passed": true,
+          "milliseconds": 2.071
+        },
+        {
+          "item": "valueOf",
+          "status": 404,
+          "passed": true,
+          "milliseconds": 2.013
+        }
+      ]
+    }
+  ],
+  "pinnedGateFingerprint": "c5942e7c9bf8f28fe7af47a6ec3887d11eeb3f8c8e8601cc6a7a54969ea0b981",
+  "replay": {
+    "pass": true,
+    "checks": {
+      "receipts": true,
+      "reachesRoot": true,
+      "contiguousParents": true,
+      "allPromoted": true,
+      "gateUnchanged": true,
+      "gateReExecutes": true,
+      "allCommitsReceipts": true,
+      "sealedFieldsAuthentic": true
+    },
+    "failures": [],
+    "chainSummary": "gen1(schemaLookup) → gen0(root)"
+  },
+  "finalPolicy": {
+    "schemaLookup": "const schema = Object.hasOwn(SCHEMAS, schemaId) ? SCHEMAS[schemaId] : undefined;"
+  },
+  "promotions": 1,
+  "replayBundle": {
+    "data_source": "LIVE_HTTP_LOCAL_HANDLER",
+    "root_id": "root",
+    "chain": [
+      {
+        "id": "root__schemaLookup_gen1",
+        "generation": 1,
+        "parents": [
+          "root"
+        ],
+        "mutation": {
+          "target": "schemaLookup",
+          "summary": "Reject inherited schema names after reproduced toString crash",
+          "inverse": {
+            "path": "index.js",
+            "parentBytes": "'use strict';\n\nconst crypto = require('crypto');\n\n// ---------------------------------------------------------------------------\n// Validation schemas – ported from agents/config-validation/src/handler/routes.rs\n// These are READ-ONLY definitions; the business logic they encode is unchanged.\n// ---------------------------------------------------------------------------\n\nconst SCHEMAS = {\n  'llm-config-v1': {\n    id: 'llm-config-v1',\n    name: 'LLM Configuration Schema v1',\n    version: '1.0.0',\n    description: 'Schema for LLM configuration entries',\n    fields: [\n      { path: 'namespace', field_type: 'string', required: true, pattern: '^[a-z][a-z0-9-/]*$', description: 'Configuration namespace' },\n      { path: 'key',       field_type: 'string', required: true, pattern: '^[a-zA-Z][a-zA-Z0-9_-]*$', description: 'Configuration key' },\n      { path: 'value',     field_type: 'any',    required: true, pattern: null, description: 'Configuration value' },\n      { path: 'environment', field_type: 'string', required: false, pattern: '^(development|staging|production|base)$', description: 'Target environment' },\n    ],\n  },\n  'provider-config-v1': {\n    id: 'provider-config-v1',\n    name: 'Provider Configuration Schema v1',\n    version: '1.0.0',\n    description: 'Schema for external provider configurations',\n    fields: [\n      { path: 'provider_type', field_type: 'string', required: true, pattern: '^(vault|aws|gcp|azure|env)$', description: 'Provider type' },\n      { path: 'endpoint',      field_type: 'string', required: false, pattern: '^https?://', description: 'Provider endpoint URL' },\n      { path: 'auth',          field_type: 'object', required: false, pattern: null, description: 'Authentication configuration' },\n    ],\n  },\n};\n\n// ---------------------------------------------------------------------------\n// Validation helpers – mirrors agents/config-validation/src/handler/routes.rs\n// ---------------------------------------------------------------------------\n\nfunction getJsonPath(obj, path) {\n  const parts = path.split('.');\n  let current = obj;\n  for (const part of parts) {\n    if (current == null || typeof current !== 'object') return undefined;\n    current = current[part];\n  }\n  return current;\n}\n\nfunction validateType(value, expected) {\n  switch (expected) {\n    case 'string':  return typeof value === 'string';\n    case 'number':\n    case 'integer': return typeof value === 'number';\n    case 'boolean': return typeof value === 'boolean';\n    case 'array':   return Array.isArray(value);\n    case 'object':  return value !== null && typeof value === 'object' && !Array.isArray(value);\n    case 'any':     return true;\n    case 'null':    return value === null;\n    default:        return true;\n  }\n}\n\nfunction jsonTypeName(value) {\n  if (value === null) return 'null';\n  if (Array.isArray(value)) return 'array';\n  return typeof value; // string | number | boolean | object\n}\n\nfunction countFields(value) {\n  if (value !== null && typeof value === 'object' && !Array.isArray(value)) {\n    return Object.keys(value).length + Object.values(value).reduce((s, v) => s + countFields(v), 0);\n  }\n  if (Array.isArray(value)) {\n    return value.reduce((s, v) => s + countFields(v), 0);\n  }\n  return 0;\n}\n\nfunction collectTopLevelKeys(obj) {\n  if (obj !== null && typeof obj === 'object' && !Array.isArray(obj)) {\n    return Object.keys(obj);\n  }\n  return [];\n}\n\nfunction validateAgainstSchema(config, schema, options) {\n  const errors = [];\n  const warnings = [];\n\n  for (const field of schema.fields) {\n    const value = getJsonPath(config, field.path);\n\n    if (field.required && value === undefined) {\n      errors.push({\n        path: field.path,\n        code: 'REQUIRED_FIELD_MISSING',\n        message: `Required field '${field.path}' is missing`,\n        expected: field.field_type,\n        actual: null,\n      });\n      continue;\n    }\n\n    if (value === undefined) continue;\n\n    if (!validateType(value, field.field_type)) {\n      errors.push({\n        path: field.path,\n        code: 'TYPE_MISMATCH',\n        message: `Field '${field.path}' has wrong type`,\n        expected: field.field_type,\n        actual: jsonTypeName(value),\n      });\n      continue;\n    }\n\n    if (field.pattern && typeof value === 'string') {\n      const re = new RegExp(field.pattern);\n      if (!re.test(value)) {\n        errors.push({\n          path: field.path,\n          code: 'PATTERN_MISMATCH',\n          message: `Field '${field.path}' does not match required pattern`,\n          expected: field.pattern,\n          actual: value,\n        });\n      }\n    }\n  }\n\n  if (options && options.strict) {\n    const schemaPaths = new Set(schema.fields.map((f) => f.path));\n    for (const key of collectTopLevelKeys(config)) {\n      if (!schemaPaths.has(key)) {\n        warnings.push({ path: key, code: 'UNKNOWN_FIELD', message: 'Field not defined in schema' });\n      }\n    }\n  }\n\n  return { errors, warnings };\n}\n\n// ---------------------------------------------------------------------------\n// Execution metadata builder\n// ---------------------------------------------------------------------------\n\nfunction buildExecutionMetadata(req, executionId) {\n  return {\n    trace_id: (req.headers && req.headers['x-correlation-id']) || crypto.randomUUID(),\n    timestamp: new Date().toISOString(),\n    service: 'config-manager-agents',\n    execution_id: executionId,\n  };\n}\n\n// ---------------------------------------------------------------------------\n// CORS helpers\n// ---------------------------------------------------------------------------\n\nconst CORS_HEADERS = {\n  'Access-Control-Allow-Origin': '*',\n  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',\n  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Correlation-Id, X-Parent-Span-Id',\n  'Access-Control-Max-Age': '3600',\n};\n\nfunction setCorsHeaders(res) {\n  for (const [key, value] of Object.entries(CORS_HEADERS)) {\n    res.setHeader(key, value);\n  }\n}\n\n// ---------------------------------------------------------------------------\n// Route handlers\n// ---------------------------------------------------------------------------\n\nfunction handleHealth(_req, res, executionId, startMs) {\n  const elapsed = Date.now() - startMs;\n  const body = {\n    status: 'healthy',\n    agents: ['validate'],\n    components: {\n      validation_engine: true,\n      schema_registry: true,\n    },\n    version: '0.5.0',\n    timestamp: new Date().toISOString(),\n    execution_metadata: buildExecutionMetadata(_req, executionId),\n    layers_executed: [\n      { layer: 'AGENT_ROUTING', status: 'completed' },\n      { layer: 'HEALTH_CHECK', status: 'completed', duration_ms: elapsed },\n    ],\n  };\n  res.status(200).json(body);\n}\n\nfunction handleValidate(req, res, executionId, startMs) {\n  const body = req.body;\n\n  if (!body || typeof body !== 'object') {\n    const elapsed = Date.now() - startMs;\n    return res.status(400).json({\n      success: false,\n      error: { code: 'BAD_REQUEST', message: 'Request body must be a JSON object' },\n      execution_metadata: buildExecutionMetadata(req, executionId),\n      layers_executed: [\n        { layer: 'AGENT_ROUTING', status: 'completed' },\n        { layer: 'CONFIG_MANAGER_VALIDATE', status: 'failed', duration_ms: elapsed },\n      ],\n    });\n  }\n\n  const config = body.config;\n  if (config === undefined || config === null) {\n    const elapsed = Date.now() - startMs;\n    return res.status(400).json({\n      success: false,\n      error: { code: 'BAD_REQUEST', message: \"Missing required field 'config'\" },\n      execution_metadata: buildExecutionMetadata(req, executionId),\n      layers_executed: [\n        { layer: 'AGENT_ROUTING', status: 'completed' },\n        { layer: 'CONFIG_MANAGER_VALIDATE', status: 'failed', duration_ms: elapsed },\n      ],\n    });\n  }\n\n  const schemaId = body.schema || 'llm-config-v1';\n  const schema = SCHEMAS[schemaId];\n  if (!schema) {\n    const elapsed = Date.now() - startMs;\n    return res.status(404).json({\n      success: false,\n      error: { code: 'NOT_FOUND', message: `Schema '${schemaId}' not found` },\n      execution_metadata: buildExecutionMetadata(req, executionId),\n      layers_executed: [\n        { layer: 'AGENT_ROUTING', status: 'completed' },\n        { layer: 'CONFIG_MANAGER_VALIDATE', status: 'failed', duration_ms: elapsed },\n      ],\n    });\n  }\n\n  const options = body.options || {};\n  const { errors, warnings } = validateAgainstSchema(config, schema, options);\n  const elapsed = Date.now() - startMs;\n\n  res.status(200).json({\n    success: errors.length === 0,\n    data: {\n      valid: errors.length === 0,\n      errors,\n      warnings,\n      schema_used: schemaId,\n      stats: {\n        fields_validated: countFields(config),\n        rules_applied: schema.fields.length,\n        duration_us: elapsed * 1000,\n      },\n    },\n    execution_metadata: buildExecutionMetadata(req, executionId),\n    layers_executed: [\n      { layer: 'AGENT_ROUTING', status: 'completed' },\n      { layer: 'CONFIG_MANAGER_VALIDATE', status: 'completed', duration_ms: elapsed },\n    ],\n  });\n}\n\nfunction handleSchemas(_req, res, executionId, startMs) {\n  const schemas = Object.values(SCHEMAS).map((s) => ({\n    id: s.id,\n    name: s.name,\n    version: s.version,\n    description: s.description,\n    field_count: s.fields.length,\n  }));\n  const elapsed = Date.now() - startMs;\n\n  res.status(200).json({\n    success: true,\n    data: schemas,\n    execution_metadata: buildExecutionMetadata(_req, executionId),\n    layers_executed: [\n      { layer: 'AGENT_ROUTING', status: 'completed' },\n      { layer: 'SCHEMA_LIST', status: 'completed', duration_ms: elapsed },\n    ],\n  });\n}\n\n// ---------------------------------------------------------------------------\n// Cloud Function entry point\n// ---------------------------------------------------------------------------\n\n/**\n * Google Cloud Function HTTP handler for config-manager-agents.\n *\n * Routes:\n *   POST /v1/config-manager/validate  – Config Validation Agent\n *   GET  /health                       – Health / readiness\n *   GET  /v1/config-manager/schemas    – List available schemas\n *\n * @param {import('express').Request} req\n * @param {import('express').Response} res\n */\nexports.handler = (req, res) => {\n  const startMs = Date.now();\n  const executionId = crypto.randomUUID();\n\n  // CORS – handle preflight and set headers on every response\n  setCorsHeaders(res);\n  if (req.method === 'OPTIONS') {\n    return res.status(204).end();\n  }\n\n  // Normalise path: strip trailing slash, lowercase\n  const path = (req.path || '/').replace(/\\/+$/, '') || '/';\n\n  // ---------- Routing ----------\n\n  if (path === '/health' && req.method === 'GET') {\n    return handleHealth(req, res, executionId, startMs);\n  }\n\n  if (path === '/v1/config-manager/validate' && req.method === 'POST') {\n    return handleValidate(req, res, executionId, startMs);\n  }\n\n  if (path === '/v1/config-manager/schemas' && req.method === 'GET') {\n    return handleSchemas(req, res, executionId, startMs);\n  }\n\n  // ---------- 404 ----------\n  const elapsed = Date.now() - startMs;\n  res.status(404).json({\n    success: false,\n    error: { code: 'NOT_FOUND', message: `Route ${req.method} ${path} not found` },\n    execution_metadata: buildExecutionMetadata(req, executionId),\n    layers_executed: [\n      { layer: 'AGENT_ROUTING', status: 'failed', duration_ms: elapsed },\n    ],\n  });\n};\n",
+            "hash": "8c953eb62049880ec3cf67e7bf3c20ce4941e09d86adc704511016253142d813"
+          }
+        },
+        "primaryDelta": 1,
+        "anchorScore": 1,
+        "verdict": "PROMOTED",
+        "failureReasons": [],
+        "receipt": {
+          "payload": {
+            "kind": "candidate",
+            "id": "root__schemaLookup_gen1",
+            "target": "schemaLookup",
+            "verdict": "PROMOTED",
+            "primaryDelta": 1,
+            "baselineScore": {
+              "primary": 0,
+              "noopRate": 1,
+              "costPerWin": 0,
+              "regressed": false,
+              "itemWins": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            "candidateScore": {
+              "primary": 1,
+              "noopRate": 0,
+              "costPerWin": 0,
+              "regressed": false,
+              "itemWins": [
+                true,
+                true,
+                true,
+                true
+              ]
+            },
+            "anchorScore": 1,
+            "failureReasons": [],
+            "parents": [
+              "root"
+            ],
+            "generation": 1
+          },
+          "signature": "uAm1vMrqQvPbNX7/uy+87BeIsdkKd9XB8YefA0BiANlvEqxgqrOOphViAuTkuEHfymmgJaXV6RkKsoy16U0lCQ==",
+          "publicKey": "MCowBQYDK2VwAyEAQGwFGEIAQCIXCwzxmFh25U6hjbONFqPfi0FhqjxYR4w=",
+          "alg": "ed25519"
+        },
+        "createdAt": "2026-10-07-generation-1",
+        "baselineScore": {
+          "primary": 0,
+          "noopRate": 1,
+          "costPerWin": 0,
+          "regressed": false,
+          "itemWins": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        "candidateScore": {
+          "primary": 1,
+          "noopRate": 0,
+          "costPerWin": 0,
+          "regressed": false,
+          "itemWins": [
+            true,
+            true,
+            true,
+            true
+          ]
+        }
+      },
+      {
+        "id": "root",
+        "generation": 0,
+        "parents": [],
+        "mutation": null,
+        "primaryDelta": 0,
+        "anchorScore": 1,
+        "verdict": "ROOT",
+        "failureReasons": [],
+        "receipt": {
+          "payload": {
+            "kind": "root",
+            "root": "root"
+          },
+          "signature": "CMtx9iT0KgUT8FgNrPDW8Iu/1TWiaYChWt3UpL6VStsvTiWCG9hz9arPbxGG7NG9YPC4wmGI+DTx5QbfYY7/AQ==",
+          "publicKey": "MCowBQYDK2VwAyEAQGwFGEIAQCIXCwzxmFh25U6hjbONFqPfi0FhqjxYR4w=",
+          "alg": "ed25519"
+        },
+        "createdAt": "2026-10-07-generation-0"
+      }
+    ],
+    "all_commits": [
+      {
+        "id": "root__schemaLookup_gen1",
+        "generation": 1,
+        "parents": [
+          "root"
+        ],
+        "mutation": {
+          "target": "schemaLookup",
+          "summary": "Reject inherited schema names after reproduced toString crash",
+          "inverse": {
+            "path": "index.js",
+            "parentBytes": "'use strict';\n\nconst crypto = require('crypto');\n\n// ---------------------------------------------------------------------------\n// Validation schemas – ported from agents/config-validation/src/handler/routes.rs\n// These are READ-ONLY definitions; the business logic they encode is unchanged.\n// ---------------------------------------------------------------------------\n\nconst SCHEMAS = {\n  'llm-config-v1': {\n    id: 'llm-config-v1',\n    name: 'LLM Configuration Schema v1',\n    version: '1.0.0',\n    description: 'Schema for LLM configuration entries',\n    fields: [\n      { path: 'namespace', field_type: 'string', required: true, pattern: '^[a-z][a-z0-9-/]*$', description: 'Configuration namespace' },\n      { path: 'key',       field_type: 'string', required: true, pattern: '^[a-zA-Z][a-zA-Z0-9_-]*$', description: 'Configuration key' },\n      { path: 'value',     field_type: 'any',    required: true, pattern: null, description: 'Configuration value' },\n      { path: 'environment', field_type: 'string', required: false, pattern: '^(development|staging|production|base)$', description: 'Target environment' },\n    ],\n  },\n  'provider-config-v1': {\n    id: 'provider-config-v1',\n    name: 'Provider Configuration Schema v1',\n    version: '1.0.0',\n    description: 'Schema for external provider configurations',\n    fields: [\n      { path: 'provider_type', field_type: 'string', required: true, pattern: '^(vault|aws|gcp|azure|env)$', description: 'Provider type' },\n      { path: 'endpoint',      field_type: 'string', required: false, pattern: '^https?://', description: 'Provider endpoint URL' },\n      { path: 'auth',          field_type: 'object', required: false, pattern: null, description: 'Authentication configuration' },\n    ],\n  },\n};\n\n// ---------------------------------------------------------------------------\n// Validation helpers – mirrors agents/config-validation/src/handler/routes.rs\n// ---------------------------------------------------------------------------\n\nfunction getJsonPath(obj, path) {\n  const parts = path.split('.');\n  let current = obj;\n  for (const part of parts) {\n    if (current == null || typeof current !== 'object') return undefined;\n    current = current[part];\n  }\n  return current;\n}\n\nfunction validateType(value, expected) {\n  switch (expected) {\n    case 'string':  return typeof value === 'string';\n    case 'number':\n    case 'integer': return typeof value === 'number';\n    case 'boolean': return typeof value === 'boolean';\n    case 'array':   return Array.isArray(value);\n    case 'object':  return value !== null && typeof value === 'object' && !Array.isArray(value);\n    case 'any':     return true;\n    case 'null':    return value === null;\n    default:        return true;\n  }\n}\n\nfunction jsonTypeName(value) {\n  if (value === null) return 'null';\n  if (Array.isArray(value)) return 'array';\n  return typeof value; // string | number | boolean | object\n}\n\nfunction countFields(value) {\n  if (value !== null && typeof value === 'object' && !Array.isArray(value)) {\n    return Object.keys(value).length + Object.values(value).reduce((s, v) => s + countFields(v), 0);\n  }\n  if (Array.isArray(value)) {\n    return value.reduce((s, v) => s + countFields(v), 0);\n  }\n  return 0;\n}\n\nfunction collectTopLevelKeys(obj) {\n  if (obj !== null && typeof obj === 'object' && !Array.isArray(obj)) {\n    return Object.keys(obj);\n  }\n  return [];\n}\n\nfunction validateAgainstSchema(config, schema, options) {\n  const errors = [];\n  const warnings = [];\n\n  for (const field of schema.fields) {\n    const value = getJsonPath(config, field.path);\n\n    if (field.required && value === undefined) {\n      errors.push({\n        path: field.path,\n        code: 'REQUIRED_FIELD_MISSING',\n        message: `Required field '${field.path}' is missing`,\n        expected: field.field_type,\n        actual: null,\n      });\n      continue;\n    }\n\n    if (value === undefined) continue;\n\n    if (!validateType(value, field.field_type)) {\n      errors.push({\n        path: field.path,\n        code: 'TYPE_MISMATCH',\n        message: `Field '${field.path}' has wrong type`,\n        expected: field.field_type,\n        actual: jsonTypeName(value),\n      });\n      continue;\n    }\n\n    if (field.pattern && typeof value === 'string') {\n      const re = new RegExp(field.pattern);\n      if (!re.test(value)) {\n        errors.push({\n          path: field.path,\n          code: 'PATTERN_MISMATCH',\n          message: `Field '${field.path}' does not match required pattern`,\n          expected: field.pattern,\n          actual: value,\n        });\n      }\n    }\n  }\n\n  if (options && options.strict) {\n    const schemaPaths = new Set(schema.fields.map((f) => f.path));\n    for (const key of collectTopLevelKeys(config)) {\n      if (!schemaPaths.has(key)) {\n        warnings.push({ path: key, code: 'UNKNOWN_FIELD', message: 'Field not defined in schema' });\n      }\n    }\n  }\n\n  return { errors, warnings };\n}\n\n// ---------------------------------------------------------------------------\n// Execution metadata builder\n// ---------------------------------------------------------------------------\n\nfunction buildExecutionMetadata(req, executionId) {\n  return {\n    trace_id: (req.headers && req.headers['x-correlation-id']) || crypto.randomUUID(),\n    timestamp: new Date().toISOString(),\n    service: 'config-manager-agents',\n    execution_id: executionId,\n  };\n}\n\n// ---------------------------------------------------------------------------\n// CORS helpers\n// ---------------------------------------------------------------------------\n\nconst CORS_HEADERS = {\n  'Access-Control-Allow-Origin': '*',\n  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',\n  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Correlation-Id, X-Parent-Span-Id',\n  'Access-Control-Max-Age': '3600',\n};\n\nfunction setCorsHeaders(res) {\n  for (const [key, value] of Object.entries(CORS_HEADERS)) {\n    res.setHeader(key, value);\n  }\n}\n\n// ---------------------------------------------------------------------------\n// Route handlers\n// ---------------------------------------------------------------------------\n\nfunction handleHealth(_req, res, executionId, startMs) {\n  const elapsed = Date.now() - startMs;\n  const body = {\n    status: 'healthy',\n    agents: ['validate'],\n    components: {\n      validation_engine: true,\n      schema_registry: true,\n    },\n    version: '0.5.0',\n    timestamp: new Date().toISOString(),\n    execution_metadata: buildExecutionMetadata(_req, executionId),\n    layers_executed: [\n      { layer: 'AGENT_ROUTING', status: 'completed' },\n      { layer: 'HEALTH_CHECK', status: 'completed', duration_ms: elapsed },\n    ],\n  };\n  res.status(200).json(body);\n}\n\nfunction handleValidate(req, res, executionId, startMs) {\n  const body = req.body;\n\n  if (!body || typeof body !== 'object') {\n    const elapsed = Date.now() - startMs;\n    return res.status(400).json({\n      success: false,\n      error: { code: 'BAD_REQUEST', message: 'Request body must be a JSON object' },\n      execution_metadata: buildExecutionMetadata(req, executionId),\n      layers_executed: [\n        { layer: 'AGENT_ROUTING', status: 'completed' },\n        { layer: 'CONFIG_MANAGER_VALIDATE', status: 'failed', duration_ms: elapsed },\n      ],\n    });\n  }\n\n  const config = body.config;\n  if (config === undefined || config === null) {\n    const elapsed = Date.now() - startMs;\n    return res.status(400).json({\n      success: false,\n      error: { code: 'BAD_REQUEST', message: \"Missing required field 'config'\" },\n      execution_metadata: buildExecutionMetadata(req, executionId),\n      layers_executed: [\n        { layer: 'AGENT_ROUTING', status: 'completed' },\n        { layer: 'CONFIG_MANAGER_VALIDATE', status: 'failed', duration_ms: elapsed },\n      ],\n    });\n  }\n\n  const schemaId = body.schema || 'llm-config-v1';\n  const schema = SCHEMAS[schemaId];\n  if (!schema) {\n    const elapsed = Date.now() - startMs;\n    return res.status(404).json({\n      success: false,\n      error: { code: 'NOT_FOUND', message: `Schema '${schemaId}' not found` },\n      execution_metadata: buildExecutionMetadata(req, executionId),\n      layers_executed: [\n        { layer: 'AGENT_ROUTING', status: 'completed' },\n        { layer: 'CONFIG_MANAGER_VALIDATE', status: 'failed', duration_ms: elapsed },\n      ],\n    });\n  }\n\n  const options = body.options || {};\n  const { errors, warnings } = validateAgainstSchema(config, schema, options);\n  const elapsed = Date.now() - startMs;\n\n  res.status(200).json({\n    success: errors.length === 0,\n    data: {\n      valid: errors.length === 0,\n      errors,\n      warnings,\n      schema_used: schemaId,\n      stats: {\n        fields_validated: countFields(config),\n        rules_applied: schema.fields.length,\n        duration_us: elapsed * 1000,\n      },\n    },\n    execution_metadata: buildExecutionMetadata(req, executionId),\n    layers_executed: [\n      { layer: 'AGENT_ROUTING', status: 'completed' },\n      { layer: 'CONFIG_MANAGER_VALIDATE', status: 'completed', duration_ms: elapsed },\n    ],\n  });\n}\n\nfunction handleSchemas(_req, res, executionId, startMs) {\n  const schemas = Object.values(SCHEMAS).map((s) => ({\n    id: s.id,\n    name: s.name,\n    version: s.version,\n    description: s.description,\n    field_count: s.fields.length,\n  }));\n  const elapsed = Date.now() - startMs;\n\n  res.status(200).json({\n    success: true,\n    data: schemas,\n    execution_metadata: buildExecutionMetadata(_req, executionId),\n    layers_executed: [\n      { layer: 'AGENT_ROUTING', status: 'completed' },\n      { layer: 'SCHEMA_LIST', status: 'completed', duration_ms: elapsed },\n    ],\n  });\n}\n\n// ---------------------------------------------------------------------------\n// Cloud Function entry point\n// ---------------------------------------------------------------------------\n\n/**\n * Google Cloud Function HTTP handler for config-manager-agents.\n *\n * Routes:\n *   POST /v1/config-manager/validate  – Config Validation Agent\n *   GET  /health                       – Health / readiness\n *   GET  /v1/config-manager/schemas    – List available schemas\n *\n * @param {import('express').Request} req\n * @param {import('express').Response} res\n */\nexports.handler = (req, res) => {\n  const startMs = Date.now();\n  const executionId = crypto.randomUUID();\n\n  // CORS – handle preflight and set headers on every response\n  setCorsHeaders(res);\n  if (req.method === 'OPTIONS') {\n    return res.status(204).end();\n  }\n\n  // Normalise path: strip trailing slash, lowercase\n  const path = (req.path || '/').replace(/\\/+$/, '') || '/';\n\n  // ---------- Routing ----------\n\n  if (path === '/health' && req.method === 'GET') {\n    return handleHealth(req, res, executionId, startMs);\n  }\n\n  if (path === '/v1/config-manager/validate' && req.method === 'POST') {\n    return handleValidate(req, res, executionId, startMs);\n  }\n\n  if (path === '/v1/config-manager/schemas' && req.method === 'GET') {\n    return handleSchemas(req, res, executionId, startMs);\n  }\n\n  // ---------- 404 ----------\n  const elapsed = Date.now() - startMs;\n  res.status(404).json({\n    success: false,\n    error: { code: 'NOT_FOUND', message: `Route ${req.method} ${path} not found` },\n    execution_metadata: buildExecutionMetadata(req, executionId),\n    layers_executed: [\n      { layer: 'AGENT_ROUTING', status: 'failed', duration_ms: elapsed },\n    ],\n  });\n};\n",
+            "hash": "8c953eb62049880ec3cf67e7bf3c20ce4941e09d86adc704511016253142d813"
+          }
+        },
+        "primaryDelta": 1,
+        "anchorScore": 1,
+        "verdict": "PROMOTED",
+        "failureReasons": [],
+        "receipt": {
+          "payload": {
+            "kind": "candidate",
+            "id": "root__schemaLookup_gen1",
+            "target": "schemaLookup",
+            "verdict": "PROMOTED",
+            "primaryDelta": 1,
+            "baselineScore": {
+              "primary": 0,
+              "noopRate": 1,
+              "costPerWin": 0,
+              "regressed": false,
+              "itemWins": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            "candidateScore": {
+              "primary": 1,
+              "noopRate": 0,
+              "costPerWin": 0,
+              "regressed": false,
+              "itemWins": [
+                true,
+                true,
+                true,
+                true
+              ]
+            },
+            "anchorScore": 1,
+            "failureReasons": [],
+            "parents": [
+              "root"
+            ],
+            "generation": 1
+          },
+          "signature": "uAm1vMrqQvPbNX7/uy+87BeIsdkKd9XB8YefA0BiANlvEqxgqrOOphViAuTkuEHfymmgJaXV6RkKsoy16U0lCQ==",
+          "publicKey": "MCowBQYDK2VwAyEAQGwFGEIAQCIXCwzxmFh25U6hjbONFqPfi0FhqjxYR4w=",
+          "alg": "ed25519"
+        },
+        "createdAt": "2026-10-07-generation-1",
+        "baselineScore": {
+          "primary": 0,
+          "noopRate": 1,
+          "costPerWin": 0,
+          "regressed": false,
+          "itemWins": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        "candidateScore": {
+          "primary": 1,
+          "noopRate": 0,
+          "costPerWin": 0,
+          "regressed": false,
+          "itemWins": [
+            true,
+            true,
+            true,
+            true
+          ]
+        }
+      },
+      {
+        "id": "root__schemaLookup_gen1__schemaLookup_gen2",
+        "generation": 2,
+        "parents": [
+          "root__schemaLookup_gen1"
+        ],
+        "mutation": {
+          "target": "schemaLookup",
+          "summary": "Reject inherited schema names after reproduced toString crash",
+          "inverse": {
+            "path": "index.js",
+            "parentBytes": "'use strict';\n\nconst crypto = require('crypto');\n\n// ---------------------------------------------------------------------------\n// Validation schemas – ported from agents/config-validation/src/handler/routes.rs\n// These are READ-ONLY definitions; the business logic they encode is unchanged.\n// ---------------------------------------------------------------------------\n\nconst SCHEMAS = {\n  'llm-config-v1': {\n    id: 'llm-config-v1',\n    name: 'LLM Configuration Schema v1',\n    version: '1.0.0',\n    description: 'Schema for LLM configuration entries',\n    fields: [\n      { path: 'namespace', field_type: 'string', required: true, pattern: '^[a-z][a-z0-9-/]*$', description: 'Configuration namespace' },\n      { path: 'key',       field_type: 'string', required: true, pattern: '^[a-zA-Z][a-zA-Z0-9_-]*$', description: 'Configuration key' },\n      { path: 'value',     field_type: 'any',    required: true, pattern: null, description: 'Configuration value' },\n      { path: 'environment', field_type: 'string', required: false, pattern: '^(development|staging|production|base)$', description: 'Target environment' },\n    ],\n  },\n  'provider-config-v1': {\n    id: 'provider-config-v1',\n    name: 'Provider Configuration Schema v1',\n    version: '1.0.0',\n    description: 'Schema for external provider configurations',\n    fields: [\n      { path: 'provider_type', field_type: 'string', required: true, pattern: '^(vault|aws|gcp|azure|env)$', description: 'Provider type' },\n      { path: 'endpoint',      field_type: 'string', required: false, pattern: '^https?://', description: 'Provider endpoint URL' },\n      { path: 'auth',          field_type: 'object', required: false, pattern: null, description: 'Authentication configuration' },\n    ],\n  },\n};\n\n// ---------------------------------------------------------------------------\n// Validation helpers – mirrors agents/config-validation/src/handler/routes.rs\n// ---------------------------------------------------------------------------\n\nfunction getJsonPath(obj, path) {\n  const parts = path.split('.');\n  let current = obj;\n  for (const part of parts) {\n    if (current == null || typeof current !== 'object') return undefined;\n    current = current[part];\n  }\n  return current;\n}\n\nfunction validateType(value, expected) {\n  switch (expected) {\n    case 'string':  return typeof value === 'string';\n    case 'number':\n    case 'integer': return typeof value === 'number';\n    case 'boolean': return typeof value === 'boolean';\n    case 'array':   return Array.isArray(value);\n    case 'object':  return value !== null && typeof value === 'object' && !Array.isArray(value);\n    case 'any':     return true;\n    case 'null':    return value === null;\n    default:        return true;\n  }\n}\n\nfunction jsonTypeName(value) {\n  if (value === null) return 'null';\n  if (Array.isArray(value)) return 'array';\n  return typeof value; // string | number | boolean | object\n}\n\nfunction countFields(value) {\n  if (value !== null && typeof value === 'object' && !Array.isArray(value)) {\n    return Object.keys(value).length + Object.values(value).reduce((s, v) => s + countFields(v), 0);\n  }\n  if (Array.isArray(value)) {\n    return value.reduce((s, v) => s + countFields(v), 0);\n  }\n  return 0;\n}\n\nfunction collectTopLevelKeys(obj) {\n  if (obj !== null && typeof obj === 'object' && !Array.isArray(obj)) {\n    return Object.keys(obj);\n  }\n  return [];\n}\n\nfunction validateAgainstSchema(config, schema, options) {\n  const errors = [];\n  const warnings = [];\n\n  for (const field of schema.fields) {\n    const value = getJsonPath(config, field.path);\n\n    if (field.required && value === undefined) {\n      errors.push({\n        path: field.path,\n        code: 'REQUIRED_FIELD_MISSING',\n        message: `Required field '${field.path}' is missing`,\n        expected: field.field_type,\n        actual: null,\n      });\n      continue;\n    }\n\n    if (value === undefined) continue;\n\n    if (!validateType(value, field.field_type)) {\n      errors.push({\n        path: field.path,\n        code: 'TYPE_MISMATCH',\n        message: `Field '${field.path}' has wrong type`,\n        expected: field.field_type,\n        actual: jsonTypeName(value),\n      });\n      continue;\n    }\n\n    if (field.pattern && typeof value === 'string') {\n      const re = new RegExp(field.pattern);\n      if (!re.test(value)) {\n        errors.push({\n          path: field.path,\n          code: 'PATTERN_MISMATCH',\n          message: `Field '${field.path}' does not match required pattern`,\n          expected: field.pattern,\n          actual: value,\n        });\n      }\n    }\n  }\n\n  if (options && options.strict) {\n    const schemaPaths = new Set(schema.fields.map((f) => f.path));\n    for (const key of collectTopLevelKeys(config)) {\n      if (!schemaPaths.has(key)) {\n        warnings.push({ path: key, code: 'UNKNOWN_FIELD', message: 'Field not defined in schema' });\n      }\n    }\n  }\n\n  return { errors, warnings };\n}\n\n// ---------------------------------------------------------------------------\n// Execution metadata builder\n// ---------------------------------------------------------------------------\n\nfunction buildExecutionMetadata(req, executionId) {\n  return {\n    trace_id: (req.headers && req.headers['x-correlation-id']) || crypto.randomUUID(),\n    timestamp: new Date().toISOString(),\n    service: 'config-manager-agents',\n    execution_id: executionId,\n  };\n}\n\n// ---------------------------------------------------------------------------\n// CORS helpers\n// ---------------------------------------------------------------------------\n\nconst CORS_HEADERS = {\n  'Access-Control-Allow-Origin': '*',\n  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',\n  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Correlation-Id, X-Parent-Span-Id',\n  'Access-Control-Max-Age': '3600',\n};\n\nfunction setCorsHeaders(res) {\n  for (const [key, value] of Object.entries(CORS_HEADERS)) {\n    res.setHeader(key, value);\n  }\n}\n\n// ---------------------------------------------------------------------------\n// Route handlers\n// ---------------------------------------------------------------------------\n\nfunction handleHealth(_req, res, executionId, startMs) {\n  const elapsed = Date.now() - startMs;\n  const body = {\n    status: 'healthy',\n    agents: ['validate'],\n    components: {\n      validation_engine: true,\n      schema_registry: true,\n    },\n    version: '0.5.0',\n    timestamp: new Date().toISOString(),\n    execution_metadata: buildExecutionMetadata(_req, executionId),\n    layers_executed: [\n      { layer: 'AGENT_ROUTING', status: 'completed' },\n      { layer: 'HEALTH_CHECK', status: 'completed', duration_ms: elapsed },\n    ],\n  };\n  res.status(200).json(body);\n}\n\nfunction handleValidate(req, res, executionId, startMs) {\n  const body = req.body;\n\n  if (!body || typeof body !== 'object') {\n    const elapsed = Date.now() - startMs;\n    return res.status(400).json({\n      success: false,\n      error: { code: 'BAD_REQUEST', message: 'Request body must be a JSON object' },\n      execution_metadata: buildExecutionMetadata(req, executionId),\n      layers_executed: [\n        { layer: 'AGENT_ROUTING', status: 'completed' },\n        { layer: 'CONFIG_MANAGER_VALIDATE', status: 'failed', duration_ms: elapsed },\n      ],\n    });\n  }\n\n  const config = body.config;\n  if (config === undefined || config === null) {\n    const elapsed = Date.now() - startMs;\n    return res.status(400).json({\n      success: false,\n      error: { code: 'BAD_REQUEST', message: \"Missing required field 'config'\" },\n      execution_metadata: buildExecutionMetadata(req, executionId),\n      layers_executed: [\n        { layer: 'AGENT_ROUTING', status: 'completed' },\n        { layer: 'CONFIG_MANAGER_VALIDATE', status: 'failed', duration_ms: elapsed },\n      ],\n    });\n  }\n\n  const schemaId = body.schema || 'llm-config-v1';\n  const schema = SCHEMAS[schemaId];\n  if (!schema) {\n    const elapsed = Date.now() - startMs;\n    return res.status(404).json({\n      success: false,\n      error: { code: 'NOT_FOUND', message: `Schema '${schemaId}' not found` },\n      execution_metadata: buildExecutionMetadata(req, executionId),\n      layers_executed: [\n        { layer: 'AGENT_ROUTING', status: 'completed' },\n        { layer: 'CONFIG_MANAGER_VALIDATE', status: 'failed', duration_ms: elapsed },\n      ],\n    });\n  }\n\n  const options = body.options || {};\n  const { errors, warnings } = validateAgainstSchema(config, schema, options);\n  const elapsed = Date.now() - startMs;\n\n  res.status(200).json({\n    success: errors.length === 0,\n    data: {\n      valid: errors.length === 0,\n      errors,\n      warnings,\n      schema_used: schemaId,\n      stats: {\n        fields_validated: countFields(config),\n        rules_applied: schema.fields.length,\n        duration_us: elapsed * 1000,\n      },\n    },\n    execution_metadata: buildExecutionMetadata(req, executionId),\n    layers_executed: [\n      { layer: 'AGENT_ROUTING', status: 'completed' },\n      { layer: 'CONFIG_MANAGER_VALIDATE', status: 'completed', duration_ms: elapsed },\n    ],\n  });\n}\n\nfunction handleSchemas(_req, res, executionId, startMs) {\n  const schemas = Object.values(SCHEMAS).map((s) => ({\n    id: s.id,\n    name: s.name,\n    version: s.version,\n    description: s.description,\n    field_count: s.fields.length,\n  }));\n  const elapsed = Date.now() - startMs;\n\n  res.status(200).json({\n    success: true,\n    data: schemas,\n    execution_metadata: buildExecutionMetadata(_req, executionId),\n    layers_executed: [\n      { layer: 'AGENT_ROUTING', status: 'completed' },\n      { layer: 'SCHEMA_LIST', status: 'completed', duration_ms: elapsed },\n    ],\n  });\n}\n\n// ---------------------------------------------------------------------------\n// Cloud Function entry point\n// ---------------------------------------------------------------------------\n\n/**\n * Google Cloud Function HTTP handler for config-manager-agents.\n *\n * Routes:\n *   POST /v1/config-manager/validate  – Config Validation Agent\n *   GET  /health                       – Health / readiness\n *   GET  /v1/config-manager/schemas    – List available schemas\n *\n * @param {import('express').Request} req\n * @param {import('express').Response} res\n */\nexports.handler = (req, res) => {\n  const startMs = Date.now();\n  const executionId = crypto.randomUUID();\n\n  // CORS – handle preflight and set headers on every response\n  setCorsHeaders(res);\n  if (req.method === 'OPTIONS') {\n    return res.status(204).end();\n  }\n\n  // Normalise path: strip trailing slash, lowercase\n  const path = (req.path || '/').replace(/\\/+$/, '') || '/';\n\n  // ---------- Routing ----------\n\n  if (path === '/health' && req.method === 'GET') {\n    return handleHealth(req, res, executionId, startMs);\n  }\n\n  if (path === '/v1/config-manager/validate' && req.method === 'POST') {\n    return handleValidate(req, res, executionId, startMs);\n  }\n\n  if (path === '/v1/config-manager/schemas' && req.method === 'GET') {\n    return handleSchemas(req, res, executionId, startMs);\n  }\n\n  // ---------- 404 ----------\n  const elapsed = Date.now() - startMs;\n  res.status(404).json({\n    success: false,\n    error: { code: 'NOT_FOUND', message: `Route ${req.method} ${path} not found` },\n    execution_metadata: buildExecutionMetadata(req, executionId),\n    layers_executed: [\n      { layer: 'AGENT_ROUTING', status: 'failed', duration_ms: elapsed },\n    ],\n  });\n};\n",
+            "hash": "8c953eb62049880ec3cf67e7bf3c20ce4941e09d86adc704511016253142d813"
+          }
+        },
+        "primaryDelta": 0,
+        "anchorScore": null,
+        "verdict": "REJECTED",
+        "failureReasons": [
+          "no_improvement_at_noop_floor"
+        ],
+        "receipt": {
+          "payload": {
+            "kind": "candidate",
+            "id": "root__schemaLookup_gen1__schemaLookup_gen2",
+            "target": "schemaLookup",
+            "verdict": "REJECTED",
+            "primaryDelta": 0,
+            "baselineScore": {
+              "primary": 1,
+              "noopRate": 0,
+              "costPerWin": 0,
+              "regressed": false,
+              "itemWins": [
+                true,
+                true,
+                true,
+                true
+              ]
+            },
+            "candidateScore": {
+              "primary": 1,
+              "noopRate": 0,
+              "costPerWin": 0,
+              "regressed": false,
+              "itemWins": [
+                true,
+                true,
+                true,
+                true
+              ]
+            },
+            "anchorScore": null,
+            "failureReasons": [
+              "no_improvement_at_noop_floor"
+            ],
+            "parents": [
+              "root__schemaLookup_gen1"
+            ],
+            "generation": 2
+          },
+          "signature": "il+G8cEv2FPFITuAcN1zcwJJMJAay3GlV0ysXw6+x1Rwlq8oKTR73mYtGDHcpsq6k8iNglu/AXgOIzzTWdidDA==",
+          "publicKey": "MCowBQYDK2VwAyEAQGwFGEIAQCIXCwzxmFh25U6hjbONFqPfi0FhqjxYR4w=",
+          "alg": "ed25519"
+        },
+        "createdAt": "2026-10-07-generation-2",
+        "baselineScore": {
+          "primary": 1,
+          "noopRate": 0,
+          "costPerWin": 0,
+          "regressed": false,
+          "itemWins": [
+            true,
+            true,
+            true,
+            true
+          ]
+        },
+        "candidateScore": {
+          "primary": 1,
+          "noopRate": 0,
+          "costPerWin": 0,
+          "regressed": false,
+          "itemWins": [
+            true,
+            true,
+            true,
+            true
+          ]
+        }
+      }
+    ],
+    "lift_curve": [
+      {
+        "generation": 0,
+        "primary": 0,
+        "delta": 0,
+        "anchor": 1
+      },
+      {
+        "generation": 1,
+        "primary": 1,
+        "delta": 1,
+        "anchor": 1
+      }
+    ],
+    "gate_fingerprint": "c5942e7c9bf8f28fe7af47a6ec3887d11eeb3f8c8e8601cc6a7a54969ea0b981",
+    "verified_improvements": 1,
+    "anchor_surviving_improvements": 1,
+    "milestone_reached": false,
+    "created_at": "2026-10-07-generation-2"
+  },
+  "billingUsd": 0,
+  "runtimeCostAndEnergy": "unmeasured",
+  "boundary": "local real HTTP correctness evaluation; no production/load/LLM efficacy claim"
+}

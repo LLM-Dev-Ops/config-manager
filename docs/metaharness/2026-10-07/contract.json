@@ -1,0 +1,20 @@
+{
+  "baselineCommit": "ef60b9c8a9a2e25d0ed72886908c5a0fc1a174e5",
+  "upstreamCommit": "ea287d6ef7548b0b32fa3e20956fa548cfe51edb",
+  "versions": {
+    "metaharness": "0.4.17",
+    "darwin": "0.10.3",
+    "flywheel": "0.1.12"
+  },
+  "modelContract": "No model calls. Deterministic candidate proposed from the reproduced failing case; model/provider and evaluator inputs stay fixed.",
+  "discoveryCase": "toString must return a structured 404 instead of throwing",
+  "holdout": ["constructor", "__proto__", "hasOwnProperty", "valueOf"],
+  "anchor": ["llm-config-v1", "provider-config-v1", "nonexistent-v1", "health", "existing 15-test suite"],
+  "primaryMetric": "fraction of holdout HTTP requests returning structured NOT_FOUND and execution metadata",
+  "noopMetric": "fraction of holdout HTTP requests that fail to return the structured response",
+  "gate": "unmodified @metaharness/flywheel meetsPromotionRule; all anchor cases and existing tests must pass",
+  "acceptance": "holdout 4/4, anchor 4/4, existing and expanded tests pass, npm production audit has zero known vulnerabilities",
+  "rollback": "Revert the single implementation commit; the prior direct SCHEMAS lookup is restored.",
+  "scope": "one-line schema lookup hardening in the existing Cloud Function; no Rust, persistence, IAM, deployment, or package publication changes",
+  "darwinBoundary": "real-sandbox repo tests may not distinguish harness variants; Darwin output is reported separately and never substitutes for Flywheel source evaluation"
+}

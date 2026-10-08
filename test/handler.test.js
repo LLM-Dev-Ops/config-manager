@@ -205,6 +205,25 @@ test('POST /v1/config-manager/validate with unknown schema returns 404', () => {
   assert.strictEqual(res._status, 404);
 });
 
+// Object-prototype property names are not registered schemas. Looking them up
+// through the prototype chain used to reach validateAgainstSchema with a
+// function/object and throw instead of returning the documented 404 response.
+for (const schema of ['toString', 'constructor', '__proto__', 'hasOwnProperty', 'valueOf']) {
+  test(`POST /v1/config-manager/validate rejects inherited schema '${schema}'`, () => {
+    const req = mockReq({
+      method: 'POST',
+      path: '/v1/config-manager/validate',
+      body: { config: { a: 1 }, schema },
+    });
+    const res = mockRes();
+    handler(req, res);
+    assert.strictEqual(res._status, 404);
+    assert.strictEqual(res._json.success, false);
+    assert.strictEqual(res._json.error.code, 'NOT_FOUND');
+    assert.ok(res._json.execution_metadata.trace_id);
+  });
+}
+
 // --- Schemas endpoint ---
 
 test('GET /v1/config-manager/schemas returns available schemas', () => {

@@ -226,7 +226,7 @@ function handleValidate(req, res, executionId, startMs) {
   }
 
   const schemaId = body.schema || 'llm-config-v1';
-  const schema = SCHEMAS[schemaId];
+  const schema = Object.hasOwn(SCHEMAS, schemaId) ? SCHEMAS[schemaId] : undefined;
   if (!schema) {
     const elapsed = Date.now() - startMs;
     return res.status(404).json({
