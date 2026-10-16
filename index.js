@@ -158,17 +158,63 @@ function buildExecutionMetadata(req, executionId) {
 // CORS helpers
 // ---------------------------------------------------------------------------
 
+const MAX_REQUEST_BYTES = 64 * 1024;
+
 const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Correlation-Id, X-Parent-Span-Id',
   'Access-Control-Max-Age': '3600',
 };
 
-function setCorsHeaders(res) {
+function getHeader(req, name) {
+  const headers = req.headers || {};
+  const expected = name.toLowerCase();
+  const key = Object.keys(headers).find((candidate) => candidate.toLowerCase() === expected);
+  return key ? headers[key] : undefined;
+}
+
+function configuredOrigins() {
+  const configured = process.env.ALLOWED_ORIGINS || '*';
+  return configured.split(',').map((origin) => origin.trim()).filter(Boolean);
+}
+
+function setCorsHeaders(req, res) {
   for (const [key, value] of Object.entries(CORS_HEADERS)) {
     res.setHeader(key, value);
   }
+
+  const origins = configuredOrigins();
+  const requestOrigin = getHeader(req, 'origin');
+  if (origins.includes('*')) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  } else {
+    res.setHeader('Vary', 'Origin');
+    if (requestOrigin && origins.includes(requestOrigin)) {
+      res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+    }
+  }
+}
+
+function jsonError(req, res, executionId, startMs, status, code, message) {
+  return res.status(status).json({
+    success: false,
+    error: { code, message },
+    execution_metadata: buildExecutionMetadata(req, executionId),
+    layers_executed: [
+      { layer: 'AGENT_ROUTING', status: 'failed', duration_ms: Date.now() - startMs },
+    ],
+  });
+}
+
+function requestBodyBytes(req) {
+  const measured = [];
+  if (Buffer.isBuffer(req.rawBody)) measured.push(req.rawBody.byteLength);
+
+  const contentLength = Number.parseInt(getHeader(req, 'content-length'), 10);
+  if (Number.isSafeInteger(contentLength) && contentLength >= 0) measured.push(contentLength);
+
+  if (req.body !== undefined) measured.push(Buffer.byteLength(JSON.stringify(req.body), 'utf8'));
+  return measured.length === 0 ? 0 : Math.max(...measured);
 }
 
 // ---------------------------------------------------------------------------
@@ -198,7 +244,7 @@ function handleHealth(_req, res, executionId, startMs) {
 function handleValidate(req, res, executionId, startMs) {
   const body = req.body;
 
-  if (!body || typeof body !== 'object') {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
     const elapsed = Date.now() - startMs;
     return res.status(400).json({
       success: false,
@@ -223,6 +269,26 @@ function handleValidate(req, res, executionId, startMs) {
         { layer: 'CONFIG_MANAGER_VALIDATE', status: 'failed', duration_ms: elapsed },
       ],
     });
+  }
+
+  if (typeof config !== 'object' || Array.isArray(config)) {
+    return jsonError(
+      req,
+      res,
+      executionId,
+      startMs,
+      400,
+      'BAD_REQUEST',
+      "Field 'config' must be a JSON object",
+    );
+  }
+
+  if (body.schema !== undefined && typeof body.schema !== 'string') {
+    return jsonError(req, res, executionId, startMs, 400, 'BAD_REQUEST', "Field 'schema' must be a string");
+  }
+
+  if (body.options !== undefined && (body.options === null || typeof body.options !== 'object' || Array.isArray(body.options))) {
+    return jsonError(req, res, executionId, startMs, 400, 'BAD_REQUEST', "Field 'options' must be a JSON object");
   }
 
   const schemaId = body.schema || 'llm-config-v1';
@@ -306,13 +372,46 @@ exports.handler = (req, res) => {
   const executionId = crypto.randomUUID();
 
   // CORS – handle preflight and set headers on every response
-  setCorsHeaders(res);
+  setCorsHeaders(req, res);
   if (req.method === 'OPTIONS') {
+    const origins = configuredOrigins();
+    const requestOrigin = getHeader(req, 'origin');
+    if (!origins.includes('*') && requestOrigin && !origins.includes(requestOrigin)) {
+      return jsonError(req, res, executionId, startMs, 403, 'CORS_ORIGIN_DENIED', 'Origin is not allowed');
+    }
     return res.status(204).end();
   }
 
   // Normalise path: strip trailing slash, lowercase
   const path = (req.path || '/').replace(/\/+$/, '') || '/';
+
+  const routeMethods = {
+    '/health': ['GET'],
+    '/v1/config-manager/validate': ['POST'],
+    '/v1/config-manager/schemas': ['GET'],
+  };
+
+  if (Object.hasOwn(routeMethods, path) && !routeMethods[path].includes(req.method)) {
+    res.setHeader('Allow', routeMethods[path].join(', '));
+    return jsonError(req, res, executionId, startMs, 405, 'METHOD_NOT_ALLOWED', `Method ${req.method} is not allowed for ${path}`);
+  }
+
+  if (path === '/v1/config-manager/validate' && req.method === 'POST') {
+    const contentType = getHeader(req, 'content-type') || '';
+    if (!/^application\/json(?:\s*;|$)/i.test(contentType)) {
+      return jsonError(req, res, executionId, startMs, 415, 'UNSUPPORTED_MEDIA_TYPE', 'Content-Type must be application/json');
+    }
+
+    let bodyBytes;
+    try {
+      bodyBytes = requestBodyBytes(req);
+    } catch (_error) {
+      return jsonError(req, res, executionId, startMs, 400, 'BAD_REQUEST', 'Request body must be valid JSON');
+    }
+    if (bodyBytes > MAX_REQUEST_BYTES) {
+      return jsonError(req, res, executionId, startMs, 413, 'PAYLOAD_TOO_LARGE', `Request body exceeds ${MAX_REQUEST_BYTES} bytes`);
+    }
+  }
 
   // ---------- Routing ----------
 

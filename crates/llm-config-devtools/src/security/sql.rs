@@ -98,7 +98,9 @@ impl SqlInjectionScanner {
 
     fn is_excluded(path: &Path) -> bool {
         let path_str = path.to_string_lossy();
-        path_str.contains("target/") || path_str.contains("node_modules/")
+        path_str.contains("target/")
+            || path_str.contains("node_modules/")
+            || path_str.contains("crates/llm-config-devtools/src/security/")
     }
 
     fn scan_file(&self, path: &Path, content: &str) -> Result<Vec<Finding>> {

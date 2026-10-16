@@ -1,0 +1,37 @@
+{
+  "schema": 2,
+  "package": "@metaharness/flywheel",
+  "version": "0.1.12",
+  "data_source": "LIVE_LOCAL_COMMANDS",
+  "holdout": {
+    "id": "config-manager-bounded-security-v2",
+    "baseline": 0.125,
+    "candidate": 1,
+    "baseline_item_wins": [false, false, false, false, false, true, false, false],
+    "candidate_item_wins": [true, true, true, true, true, true, true, true]
+  },
+  "anchor": {
+    "id": "config-manager-anchor-v2",
+    "baseline": 1,
+    "candidate": 1,
+    "baseline_item_wins": [true, true, true, true],
+    "candidate_item_wins": [true, true, true, true]
+  },
+  "promotions": 1,
+  "chain": "gen1(revision) → gen0(root)",
+  "gate_fingerprint": "c5942e7c9bf8f28fe7af47a6ec3887d11eeb3f8c8e8601cc6a7a54969ea0b981",
+  "replay": {
+    "pass": true,
+    "checks": {
+      "receipts": true,
+      "reachesRoot": true,
+      "contiguousParents": true,
+      "allPromoted": true,
+      "gateUnchanged": true,
+      "gateReExecutes": true,
+      "allCommitsReceipts": true,
+      "sealedFieldsAuthentic": true
+    }
+  },
+  "rollback": "Revert the merge commit; no deployment or data migration is included."
+}
