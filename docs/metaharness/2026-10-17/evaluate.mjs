@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 // Runs real, identical Rust/TCP tests; never substitutes recorded or mock scores.
-// node evaluate.mjs BASELINE CANDIDATE PINNED_TOOLS OUTPUT [SHARED_CARGO_TARGET]
+// node evaluate.mjs BASELINE CANDIDATE PINNED_TOOLS OUTPUT [ISOLATED_TARGET_ROOT]
 const [baseline, candidate, runtime, output, target] = process.argv.slice(2).map(value => resolve(value));
 const fw = await import(pathToFileURL(join(runtime, 'node_modules/@metaharness/flywheel/dist/index.js')));
 assert.equal(JSON.parse(readFileSync(join(runtime, 'node_modules/@metaharness/flywheel/package.json'))).version, '0.1.12');
@@ -31,13 +31,13 @@ const evaluator = async (policy, suite) => {
   assert.equal(sourceHash(dir), policy.source, 'evaluated source must match policy');
   const command = ['test', '--locked', '-p', 'llm-config-api', '--test', 'policy_boundary', '--', '--test-threads=1'];
   const run = spawnSync('cargo', command, {
-    cwd: dir, encoding: 'utf8', timeout: 120000, maxBuffer: 4 * 1024 * 1024,
-    env: { ...process.env, CARGO_PROFILE_TEST_DEBUG: '0', CARGO_PROFILE_DEV_DEBUG: '0', ...(target ? { CARGO_TARGET_DIR: target } : {}) },
+    cwd: dir, encoding: 'utf8', timeout: 300000, maxBuffer: 4 * 1024 * 1024,
+    env: { ...process.env, CARGO_INCREMENTAL: '0', CARGO_PROFILE_TEST_DEBUG: '0', CARGO_PROFILE_DEV_DEBUG: '0', CARGO_TARGET_DIR: target ? join(target, policy.source.slice(0, 16)) : join(dir, 'target-flywheel') },
   });
   assert.equal(run.signal, null, 'signal/timeout is not a test result');
   assert.ok(run.status === 0 || run.status === 101, 'expected real Rust test completion');
   const cases = Object.fromEntries([...run.stdout.matchAll(/^test (\w+) \.\.\. (ok|FAILED)$/gm)].map(m => [m[1], m[2] === 'ok']));
-  for (const name of [...contract.holdout, ...contract.anchor, ...supplementary]) assert.ok(Object.hasOwn(cases, name), `test actually executed: ${name}`);
+  for (const name of [...contract.holdout, ...contract.anchor, ...supplementary]) assert.ok(Object.hasOwn(cases, name), `test actually executed: ${name}\n${run.stdout}\n${run.stderr}`);
   const itemWins = suite.items.map(name => cases[name]);
   const primary = itemWins.filter(Boolean).length / itemWins.length;
   const score = { primary, noopRate: 1 - primary, costPerWin: 0, regressed: dir === candidate && supplementary.some(name => !cases[name]), itemWins };
