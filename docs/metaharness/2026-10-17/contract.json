@@ -1,0 +1,9 @@
+{
+  "baseline": "0d95469072bf867bed95baa529576958147ca914",
+  "model": "none; deterministic native Rust HTTP requests",
+  "holdout": ["disallowed_origin", "oversized_declared_body", "oversized_chunked_body", "invalid_origin_bytes"],
+  "anchor": ["health", "allowed_origin", "originless_request", "valid_small_body", "blocked_ip", "blocked_endpoint", "tls_required"],
+  "acceptance": "All four holdout cases return the unchanged expected denial status; all seven anchors pass. Same test bytes and dependency lock for baseline/candidate. Existing assertions are not weakened. Workspace failures independently block merge.",
+  "bounds": {"darwinGenerations": 1, "darwinChildren": 2, "concurrency": 1},
+  "rollback": "Revert only this cycle's commit(s), retaining the prior recovery PR changes; retain parent middleware and policy bytes in signed Flywheel inverse. No deployment or persistence changes."
+}

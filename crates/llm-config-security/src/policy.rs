@@ -167,6 +167,11 @@ impl PolicyEnforcer {
         }
     }
 
+    /// Maximum actual body size permitted by this policy.
+    pub fn max_request_size(&self) -> usize {
+        self.policy.max_request_size
+    }
+
     /// Check request size
     pub fn check_request_size(&self, size: usize) -> SecurityResult<()> {
         if size > self.policy.max_request_size {
