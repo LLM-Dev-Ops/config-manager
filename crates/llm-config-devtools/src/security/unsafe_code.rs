@@ -15,6 +15,7 @@ pub struct UnsafeCodeDetector {
 
 impl UnsafeCodeDetector {
     /// Create a new unsafe code detector.
+    #[must_use]
     pub fn new(project_root: &Path) -> Self {
         Self {
             project_root: project_root.to_path_buf(),
@@ -22,6 +23,9 @@ impl UnsafeCodeDetector {
     }
 
     /// Scan for unsafe code blocks.
+    ///
+    /// # Errors
+    /// Returns an error when the project tree cannot be traversed.
     pub fn scan(&self) -> Result<Vec<Finding>> {
         tracing::info!("Scanning for unsafe code blocks");
 
@@ -37,7 +41,7 @@ impl UnsafeCodeDetector {
 
             if path.extension().and_then(|s| s.to_str()) == Some("rs") {
                 if let Ok(content) = fs::read_to_string(path) {
-                    findings.extend(self.scan_file(path, &content)?);
+                    findings.extend(self.scan_file(path, &content));
                 }
             }
         }
@@ -51,7 +55,7 @@ impl UnsafeCodeDetector {
         path_str.contains("target/") || path_str.contains("node_modules/")
     }
 
-    fn scan_file(&self, path: &Path, content: &str) -> Result<Vec<Finding>> {
+    fn scan_file(&self, path: &Path, content: &str) -> Vec<Finding> {
         let mut findings = Vec::new();
 
         for (line_num, line) in content.lines().enumerate() {
@@ -77,7 +81,7 @@ impl UnsafeCodeDetector {
             }
         }
 
-        Ok(findings)
+        findings
     }
 }
 

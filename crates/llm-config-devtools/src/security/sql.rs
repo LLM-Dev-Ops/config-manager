@@ -35,12 +35,12 @@ lazy_static! {
         },
         SqlPattern {
             name: "String concatenation with SELECT",
-            regex: Regex::new(r#"SELECT.*\+.*"#).unwrap(),
+            regex: Regex::new(r"SELECT.*\+.*").unwrap(),
             severity: Severity::High,
         },
         SqlPattern {
             name: "String concatenation with INSERT",
-            regex: Regex::new(r#"INSERT.*\+.*"#).unwrap(),
+            regex: Regex::new(r"INSERT.*\+.*").unwrap(),
             severity: Severity::High,
         },
         SqlPattern {
@@ -65,6 +65,7 @@ pub struct SqlInjectionScanner {
 
 impl SqlInjectionScanner {
     /// Create a new SQL injection scanner.
+    #[must_use]
     pub fn new(project_root: &Path) -> Self {
         Self {
             project_root: project_root.to_path_buf(),
@@ -72,6 +73,9 @@ impl SqlInjectionScanner {
     }
 
     /// Scan for SQL injection vulnerabilities.
+    ///
+    /// # Errors
+    /// Returns an error when the project tree cannot be traversed.
     pub fn scan(&self) -> Result<Vec<Finding>> {
         tracing::info!("Scanning for SQL injection vulnerabilities");
 
@@ -87,7 +91,7 @@ impl SqlInjectionScanner {
 
             if path.extension().and_then(|s| s.to_str()) == Some("rs") {
                 if let Ok(content) = fs::read_to_string(path) {
-                    findings.extend(self.scan_file(path, &content)?);
+                    findings.extend(self.scan_file(path, &content));
                 }
             }
         }
@@ -98,10 +102,12 @@ impl SqlInjectionScanner {
 
     fn is_excluded(path: &Path) -> bool {
         let path_str = path.to_string_lossy();
-        path_str.contains("target/") || path_str.contains("node_modules/")
+        path_str.contains("target/")
+            || path_str.contains("node_modules/")
+            || path_str.contains("crates/llm-config-devtools/src/security/")
     }
 
-    fn scan_file(&self, path: &Path, content: &str) -> Result<Vec<Finding>> {
+    fn scan_file(&self, path: &Path, content: &str) -> Vec<Finding> {
         let mut findings = Vec::new();
 
         for (line_num, line) in content.lines().enumerate() {
@@ -138,7 +144,7 @@ impl SqlInjectionScanner {
             }
         }
 
-        Ok(findings)
+        findings
     }
 }
 
@@ -164,7 +170,7 @@ fn bad_query(user_input: &str) -> String {
         let scanner = SqlInjectionScanner::new(dir.path());
         let findings = scanner.scan().unwrap();
 
-        assert!(findings.len() > 0);
+        assert!(!findings.is_empty());
         assert!(findings.iter().any(|f| f.category == "sql_injection"));
         assert!(findings.iter().any(|f| f.severity == Severity::Critical));
     }

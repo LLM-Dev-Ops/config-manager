@@ -55,8 +55,7 @@ mod tests {
 
     #[test]
     fn test_success_envelope() {
-        let mut span =
-            ExecutionSpan::new_repo(Uuid::new_v4(), Uuid::new_v4(), "config-manager");
+        let mut span = ExecutionSpan::new_repo(Uuid::new_v4(), Uuid::new_v4(), "config-manager");
         span.complete();
 
         let envelope = ExecutionEnvelope::success("test data".to_string(), span);
@@ -67,12 +66,10 @@ mod tests {
 
     #[test]
     fn test_failure_envelope() {
-        let mut span =
-            ExecutionSpan::new_repo(Uuid::new_v4(), Uuid::new_v4(), "config-manager");
+        let mut span = ExecutionSpan::new_repo(Uuid::new_v4(), Uuid::new_v4(), "config-manager");
         span.fail("no agents".to_string());
 
-        let envelope =
-            ExecutionEnvelope::<String>::failure("no agents".to_string(), span);
+        let envelope = ExecutionEnvelope::<String>::failure("no agents".to_string(), span);
         assert!(!envelope.success);
         assert!(envelope.data.is_none());
         assert_eq!(envelope.error, Some("no agents".to_string()));
@@ -80,8 +77,7 @@ mod tests {
 
     #[test]
     fn test_success_with_failed_tree_is_not_success() {
-        let mut span =
-            ExecutionSpan::new_repo(Uuid::new_v4(), Uuid::new_v4(), "config-manager");
+        let mut span = ExecutionSpan::new_repo(Uuid::new_v4(), Uuid::new_v4(), "config-manager");
         span.fail("agent failed".to_string());
 
         let envelope = ExecutionEnvelope::success("data".to_string(), span);
@@ -91,8 +87,7 @@ mod tests {
 
     #[test]
     fn test_json_serialization() {
-        let mut span =
-            ExecutionSpan::new_repo(Uuid::new_v4(), Uuid::new_v4(), "config-manager");
+        let mut span = ExecutionSpan::new_repo(Uuid::new_v4(), Uuid::new_v4(), "config-manager");
         span.complete();
 
         let envelope = ExecutionEnvelope::success(serde_json::json!({"valid": true}), span);

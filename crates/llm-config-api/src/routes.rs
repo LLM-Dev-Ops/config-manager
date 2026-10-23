@@ -18,6 +18,21 @@ pub struct ApiState {
     pub manager: Arc<ConfigManager>,
 }
 
+/// Compact error response for instrumented execution endpoints.
+pub struct ExecutionErrorResponse(Box<Response>);
+
+impl ExecutionErrorResponse {
+    fn new(envelope: ExecutionEnvelope<()>) -> Self {
+        Self(Box::new(Json(envelope).into_response()))
+    }
+}
+
+impl IntoResponse for ExecutionErrorResponse {
+    fn into_response(self) -> Response {
+        *self.0
+    }
+}
+
 /// Standard API error response
 #[derive(Debug, Serialize)]
 pub struct ErrorResponse {
@@ -196,12 +211,11 @@ pub async fn get_config(
         .as_deref()
         .unwrap_or("development")
         .parse()
-        .map_err(|e| ApiError::BadRequest(e))?;
+        .map_err(ApiError::BadRequest)?;
 
-    let entry = state
-        .manager
-        .get(&namespace, &key, env)?
-        .ok_or_else(|| ApiError::NotFound(format!("Configuration not found: {}:{}", namespace, key)))?;
+    let entry = state.manager.get(&namespace, &key, env)?.ok_or_else(|| {
+        ApiError::NotFound(format!("Configuration not found: {}:{}", namespace, key))
+    })?;
 
     Ok(Json(entry.into()))
 }
@@ -212,14 +226,13 @@ pub async fn set_config(
     Path((namespace, key)): Path<(String, String)>,
     Json(req): Json<SetConfigRequest>,
 ) -> Result<Json<ConfigResponse>, ApiError> {
-    let env: Environment = req
-        .env
-        .parse()
-        .map_err(|e| ApiError::BadRequest(e))?;
+    let env: Environment = req.env.parse().map_err(ApiError::BadRequest)?;
 
     let entry = if req.secret {
         // Store as encrypted secret
-        let value_str = req.value.as_str()
+        let value_str = req
+            .value
+            .as_str()
             .ok_or_else(|| ApiError::BadRequest("Secret value must be a string".to_string()))?;
         state
             .manager
@@ -245,7 +258,7 @@ pub async fn list_configs(
         .as_deref()
         .unwrap_or("development")
         .parse()
-        .map_err(|e| ApiError::BadRequest(e))?;
+        .map_err(ApiError::BadRequest)?;
 
     let entries = state.manager.list(&namespace, env)?;
     let responses: Vec<ConfigResponse> = entries.into_iter().map(|e| e.into()).collect();
@@ -264,14 +277,17 @@ pub async fn delete_config(
         .as_deref()
         .unwrap_or("development")
         .parse()
-        .map_err(|e| ApiError::BadRequest(e))?;
+        .map_err(ApiError::BadRequest)?;
 
     let deleted = state.manager.delete(&namespace, &key, env)?;
 
     if deleted {
         Ok(StatusCode::NO_CONTENT)
     } else {
-        Err(ApiError::NotFound(format!("Configuration not found: {}:{}", namespace, key)))
+        Err(ApiError::NotFound(format!(
+            "Configuration not found: {}:{}",
+            namespace, key
+        )))
     }
 }
 
@@ -286,7 +302,7 @@ pub async fn get_history(
         .as_deref()
         .unwrap_or("development")
         .parse()
-        .map_err(|e| ApiError::BadRequest(e))?;
+        .map_err(ApiError::BadRequest)?;
 
     let history = state.manager.get_history(&namespace, &key, env)?;
 
@@ -322,7 +338,7 @@ pub async fn rollback_config(
         .as_deref()
         .unwrap_or("development")
         .parse()
-        .map_err(|e| ApiError::BadRequest(e))?;
+        .map_err(ApiError::BadRequest)?;
 
     let entry = state
         .manager
@@ -345,23 +361,20 @@ pub async fn execute_get_config(
     State(state): State<ApiState>,
     Path((namespace, key)): Path<(String, String)>,
     Query(params): Query<GetConfigQuery>,
-) -> Result<Json<ExecutionEnvelope<ConfigResponse>>, Json<ExecutionEnvelope<()>>> {
+) -> Result<Json<ExecutionEnvelope<ConfigResponse>>, ExecutionErrorResponse> {
     let ctx = exec_ctx.0;
     let mut tree = SpanTreeBuilder::new(&ctx, "config-manager");
     let mut agent_span = tree.start_agent_span("config-manager-api");
 
-    let env: Environment = match params
-        .env
-        .as_deref()
-        .unwrap_or("development")
-        .parse()
-    {
+    let env: Environment = match params.env.as_deref().unwrap_or("development").parse() {
         Ok(e) => e,
         Err(e) => {
             agent_span.fail(e.clone());
             tree.add_completed_agent_span(agent_span);
             let span_tree = tree.finalize_failed(e.clone());
-            return Err(Json(ExecutionEnvelope::failure(e, span_tree)));
+            return Err(ExecutionErrorResponse::new(
+                ExecutionEnvelope::<()>::failure(e, span_tree),
+            ));
         }
     };
 
@@ -381,14 +394,18 @@ pub async fn execute_get_config(
             agent_span.fail(err.clone());
             tree.add_completed_agent_span(agent_span);
             let span_tree = tree.finalize_failed(err.clone());
-            Err(Json(ExecutionEnvelope::failure(err, span_tree)))
+            Err(ExecutionErrorResponse::new(
+                ExecutionEnvelope::<()>::failure(err, span_tree),
+            ))
         }
         Err(e) => {
             let err = e.to_string();
             agent_span.fail(err.clone());
             tree.add_completed_agent_span(agent_span);
             let span_tree = tree.finalize_failed(err.clone());
-            Err(Json(ExecutionEnvelope::failure(err, span_tree)))
+            Err(ExecutionErrorResponse::new(
+                ExecutionEnvelope::<()>::failure(err, span_tree),
+            ))
         }
     }
 }
@@ -404,7 +421,7 @@ pub async fn execute_set_config(
     State(state): State<ApiState>,
     Path((namespace, key)): Path<(String, String)>,
     Json(req): Json<SetConfigRequest>,
-) -> Result<Json<ExecutionEnvelope<ConfigResponse>>, Json<ExecutionEnvelope<()>>> {
+) -> Result<Json<ExecutionEnvelope<ConfigResponse>>, ExecutionErrorResponse> {
     let ctx = exec_ctx.0;
     let mut tree = SpanTreeBuilder::new(&ctx, "config-manager");
     let mut agent_span = tree.start_agent_span("config-manager-api");
@@ -415,7 +432,9 @@ pub async fn execute_set_config(
             agent_span.fail(e.clone());
             tree.add_completed_agent_span(agent_span);
             let span_tree = tree.finalize_failed(e.clone());
-            return Err(Json(ExecutionEnvelope::failure(e, span_tree)));
+            return Err(ExecutionErrorResponse::new(
+                ExecutionEnvelope::<()>::failure(e, span_tree),
+            ));
         }
     };
 
@@ -427,7 +446,9 @@ pub async fn execute_set_config(
                 agent_span.fail(err.clone());
                 tree.add_completed_agent_span(agent_span);
                 let span_tree = tree.finalize_failed(err.clone());
-                return Err(Json(ExecutionEnvelope::failure(err, span_tree)));
+                return Err(ExecutionErrorResponse::new(
+                    ExecutionEnvelope::<()>::failure(err, span_tree),
+                ));
             }
         };
         state
@@ -443,7 +464,9 @@ pub async fn execute_set_config(
                 agent_span.fail(err.clone());
                 tree.add_completed_agent_span(agent_span);
                 let span_tree = tree.finalize_failed(err.clone());
-                return Err(Json(ExecutionEnvelope::failure(err, span_tree)));
+                return Err(ExecutionErrorResponse::new(
+                    ExecutionEnvelope::<()>::failure(err, span_tree),
+                ));
             }
         }
     };
@@ -464,7 +487,9 @@ pub async fn execute_set_config(
             agent_span.fail(err.clone());
             tree.add_completed_agent_span(agent_span);
             let span_tree = tree.finalize_failed(err.clone());
-            Err(Json(ExecutionEnvelope::failure(err, span_tree)))
+            Err(ExecutionErrorResponse::new(
+                ExecutionEnvelope::<()>::failure(err, span_tree),
+            ))
         }
     }
 }

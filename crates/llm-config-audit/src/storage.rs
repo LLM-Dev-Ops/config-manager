@@ -66,8 +66,8 @@ impl AuditStorage for FileAuditStorage {
             .append(true)
             .open(&self.log_path)?;
 
-        let json = serde_json::to_string(event)
-            .map_err(|e| AuditError::Serialization(e.to_string()))?;
+        let json =
+            serde_json::to_string(event).map_err(|e| AuditError::Serialization(e.to_string()))?;
 
         writeln!(file, "{}", json)?;
         file.sync_all()?;

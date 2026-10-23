@@ -3,7 +3,7 @@
 //! These tests verify that all components work together correctly
 //! in real-world scenarios.
 
-use llm_config_audit::{AuditLogger, AuditEventType, FileAuditStorage};
+use llm_config_audit::{AuditEventType, AuditLogger, FileAuditStorage};
 use llm_config_cache::CacheManager;
 use llm_config_core::{ConfigManager, ConfigValue, Environment};
 use llm_config_crypto::{Algorithm, SecretKey};
@@ -393,9 +393,7 @@ async fn test_multi_component_integration() {
     rbac.assign_role(RoleAssignment::new("developer", Role::Editor));
 
     // Setup audit logging
-    let audit_storage = Arc::new(
-        FileAuditStorage::new(temp_dir.path().join("audit")).unwrap(),
-    );
+    let audit_storage = Arc::new(FileAuditStorage::new(temp_dir.path().join("audit")).unwrap());
     let audit_logger = AuditLogger::new(audit_storage);
 
     // Setup cache
@@ -421,7 +419,9 @@ async fn test_multi_component_integration() {
     // 2. Render template
     let mut vars = HashMap::new();
     vars.insert("host".to_string(), "api.example.com".to_string());
-    let api_url = template_engine.render_template("api-config", &vars).unwrap();
+    let api_url = template_engine
+        .render_template("api-config", &vars)
+        .unwrap();
 
     // 3. Store configuration
     let entry = config_manager
@@ -457,7 +457,9 @@ async fn test_multi_component_integration() {
         .is_ok());
 
     // 2. Get from cache (fast path)
-    let cached_entry = cache.get("production/api", "endpoint", "production").unwrap();
+    let cached_entry = cache
+        .get("production/api", "endpoint", "production")
+        .unwrap();
     assert_eq!(cached_entry.id, entry.id);
 
     // 3. Log the access

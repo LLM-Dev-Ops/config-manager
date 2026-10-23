@@ -63,7 +63,8 @@ impl L1Cache {
 
     /// Put an entry into the cache
     pub fn put(&self, entry: ConfigEntry) -> Result<()> {
-        let cache_key = Self::cache_key(&entry.namespace, &entry.key, &entry.environment.to_string());
+        let cache_key =
+            Self::cache_key(&entry.namespace, &entry.key, &entry.environment.to_string());
 
         let mut cache = self.cache.write().unwrap();
 

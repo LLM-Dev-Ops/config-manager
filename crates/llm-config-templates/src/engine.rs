@@ -32,15 +32,10 @@ impl TemplateEngine {
     }
 
     /// Render a template by name
-    pub fn render_template(
-        &self,
-        name: &str,
-        vars: &HashMap<String, String>,
-    ) -> Result<String> {
-        let template = self
-            .templates
-            .get(name)
-            .ok_or_else(|| TemplateError::InvalidTemplate(format!("Template not found: {}", name)))?;
+    pub fn render_template(&self, name: &str, vars: &HashMap<String, String>) -> Result<String> {
+        let template = self.templates.get(name).ok_or_else(|| {
+            TemplateError::InvalidTemplate(format!("Template not found: {}", name))
+        })?;
 
         template.render(vars)
     }
@@ -56,7 +51,7 @@ impl TemplateEngine {
                 parser::Token::Variable(var_name) => {
                     let value = vars
                         .get(&var_name)
-                        .ok_or_else(|| TemplateError::VariableNotFound(var_name))?;
+                        .ok_or(TemplateError::VariableNotFound(var_name))?;
                     result.push_str(value);
                 }
             }

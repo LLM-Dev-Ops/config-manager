@@ -3,8 +3,8 @@
 //! This module provides functionality for generating markdown reports
 //! from benchmark results.
 
+use super::io::{read_raw_results, summary_file};
 use super::result::BenchmarkResult;
-use super::io::{summary_file, read_raw_results};
 use std::fs;
 use std::io::{self, Write};
 use std::path::Path;
@@ -118,10 +118,7 @@ pub fn update_summary(base_path: &Path) -> io::Result<()> {
 }
 
 /// Generate a comparison report between two sets of results
-pub fn generate_comparison(
-    baseline: &[BenchmarkResult],
-    current: &[BenchmarkResult],
-) -> String {
+pub fn generate_comparison(baseline: &[BenchmarkResult], current: &[BenchmarkResult]) -> String {
     let mut md = String::new();
 
     md.push_str("# Benchmark Comparison\n\n");
@@ -135,15 +132,11 @@ pub fn generate_comparison(
     md.push_str("|--------|---------------|--------------|--------|\n");
 
     // Create maps for quick lookup
-    let baseline_map: std::collections::HashMap<_, _> = baseline
-        .iter()
-        .map(|r| (r.target_id.clone(), r))
-        .collect();
+    let baseline_map: std::collections::HashMap<_, _> =
+        baseline.iter().map(|r| (r.target_id.clone(), r)).collect();
 
-    let current_map: std::collections::HashMap<_, _> = current
-        .iter()
-        .map(|r| (r.target_id.clone(), r))
-        .collect();
+    let current_map: std::collections::HashMap<_, _> =
+        current.iter().map(|r| (r.target_id.clone(), r)).collect();
 
     // Get all unique targets
     let mut all_targets: std::collections::HashSet<_> = baseline_map.keys().collect();

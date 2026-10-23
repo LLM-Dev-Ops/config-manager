@@ -8,7 +8,11 @@ const { handler } = require('../index');
 // ---------------------------------------------------------------------------
 
 function mockReq({ method = 'GET', path = '/', headers = {}, body = undefined } = {}) {
-  return { method, path, headers, body };
+  const normalizedHeaders = { ...headers };
+  if (body !== undefined && !Object.keys(normalizedHeaders).some((key) => key.toLowerCase() === 'content-type')) {
+    normalizedHeaders['content-type'] = 'application/json';
+  }
+  return { method, path, headers: normalizedHeaders, body };
 }
 
 function mockRes() {
@@ -56,6 +60,37 @@ test('OPTIONS returns 204 with CORS headers', () => {
   assert.strictEqual(res._ended, true);
   assert.strictEqual(res._headers['Access-Control-Allow-Origin'], '*');
   assert.ok(res._headers['Access-Control-Allow-Methods'].includes('POST'));
+});
+
+test('configured CORS allowlist reflects only an exact trusted origin', () => {
+  const previous = process.env.ALLOWED_ORIGINS;
+  process.env.ALLOWED_ORIGINS = ' https://trusted.example,https://second.example ';
+  try {
+    const req = mockReq({ method: 'GET', path: '/health', headers: { origin: 'https://second.example' } });
+    const res = mockRes();
+    handler(req, res);
+    assert.strictEqual(res._headers['Access-Control-Allow-Origin'], 'https://second.example');
+    assert.strictEqual(res._headers.Vary, 'Origin');
+  } finally {
+    if (previous === undefined) delete process.env.ALLOWED_ORIGINS;
+    else process.env.ALLOWED_ORIGINS = previous;
+  }
+});
+
+test('configured CORS allowlist rejects an untrusted preflight', () => {
+  const previous = process.env.ALLOWED_ORIGINS;
+  process.env.ALLOWED_ORIGINS = 'https://trusted.example';
+  try {
+    const req = mockReq({ method: 'OPTIONS', path: '/v1/config-manager/validate', headers: { origin: 'https://attacker.example' } });
+    const res = mockRes();
+    handler(req, res);
+    assert.strictEqual(res._status, 403);
+    assert.strictEqual(res._headers['Access-Control-Allow-Origin'], undefined);
+    assert.strictEqual(res._json.error.code, 'CORS_ORIGIN_DENIED');
+  } finally {
+    if (previous === undefined) delete process.env.ALLOWED_ORIGINS;
+    else process.env.ALLOWED_ORIGINS = previous;
+  }
 });
 
 // --- Health ---
@@ -190,6 +225,80 @@ test('POST /v1/config-manager/validate without config returns 400', () => {
   handler(req, res);
   assert.strictEqual(res._status, 400);
   assert.strictEqual(res._json.success, false);
+});
+
+test('POST /v1/config-manager/validate rejects non-JSON media types', () => {
+  const req = mockReq({
+    method: 'POST',
+    path: '/v1/config-manager/validate',
+    headers: { 'content-type': 'text/plain' },
+    body: { config: { namespace: 'app/db', key: 'timeout', value: 30 } },
+  });
+  const res = mockRes();
+  handler(req, res);
+  assert.strictEqual(res._status, 415);
+  assert.strictEqual(res._json.error.code, 'UNSUPPORTED_MEDIA_TYPE');
+});
+
+test('POST /v1/config-manager/validate rejects payloads over 64 KiB', () => {
+  const req = mockReq({
+    method: 'POST',
+    path: '/v1/config-manager/validate',
+    headers: { 'content-type': 'application/json', 'content-length': String(65 * 1024) },
+    body: { config: { namespace: 'app/db', key: 'value', value: 'small' } },
+  });
+  const res = mockRes();
+  handler(req, res);
+  assert.strictEqual(res._status, 413);
+  assert.strictEqual(res._json.error.code, 'PAYLOAD_TOO_LARGE');
+});
+
+test('POST /v1/config-manager/validate cannot bypass the limit with a false content length', () => {
+  const req = mockReq({
+    method: 'POST',
+    path: '/v1/config-manager/validate',
+    headers: { 'content-type': 'application/json', 'content-length': '10' },
+    body: { config: { namespace: 'app/db', key: 'value', value: 'x'.repeat(65 * 1024) } },
+  });
+  const res = mockRes();
+  handler(req, res);
+  assert.strictEqual(res._status, 413);
+  assert.strictEqual(res._json.error.code, 'PAYLOAD_TOO_LARGE');
+});
+
+for (const config of ['secret', [], 42]) {
+  test(`POST /v1/config-manager/validate rejects non-object config ${JSON.stringify(config)}`, () => {
+    const req = mockReq({ method: 'POST', path: '/v1/config-manager/validate', body: { config } });
+    const res = mockRes();
+    handler(req, res);
+    assert.strictEqual(res._status, 400);
+    assert.strictEqual(res._json.error.code, 'BAD_REQUEST');
+  });
+}
+
+test('POST /v1/config-manager/validate rejects non-string schema identifiers', () => {
+  const req = mockReq({ method: 'POST', path: '/v1/config-manager/validate', body: { config: {}, schema: {} } });
+  const res = mockRes();
+  handler(req, res);
+  assert.strictEqual(res._status, 400);
+  assert.strictEqual(res._json.error.code, 'BAD_REQUEST');
+});
+
+test('POST /v1/config-manager/validate rejects non-object options', () => {
+  const req = mockReq({ method: 'POST', path: '/v1/config-manager/validate', body: { config: {}, options: 'strict' } });
+  const res = mockRes();
+  handler(req, res);
+  assert.strictEqual(res._status, 400);
+  assert.strictEqual(res._json.error.code, 'BAD_REQUEST');
+});
+
+test('known route with unsupported method returns 405 and Allow', () => {
+  const req = mockReq({ method: 'DELETE', path: '/v1/config-manager/validate' });
+  const res = mockRes();
+  handler(req, res);
+  assert.strictEqual(res._status, 405);
+  assert.strictEqual(res._headers.Allow, 'POST');
+  assert.strictEqual(res._json.error.code, 'METHOD_NOT_ALLOWED');
 });
 
 // --- Validate: unknown schema ---

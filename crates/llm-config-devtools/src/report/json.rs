@@ -4,6 +4,9 @@ use crate::error::Result;
 use crate::security::SecurityReport;
 
 /// Generate a JSON report.
+///
+/// # Errors
+/// Returns an error when the report cannot be serialized as JSON.
 pub fn generate(report: &SecurityReport) -> Result<String> {
     let json = serde_json::to_string_pretty(report)?;
     Ok(json)

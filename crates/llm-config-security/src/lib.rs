@@ -11,21 +11,21 @@
 //! - Audit logging validation
 //! - Attack prevention (SQLi, XSS, CSRF, etc.)
 
+pub mod audit;
+pub mod crypto;
 pub mod errors;
 pub mod input;
-pub mod rate_limit;
-pub mod crypto;
 pub mod policy;
-pub mod audit;
+pub mod rate_limit;
 pub mod validation;
 
+pub use audit::{AuditConfig, AuditValidator};
+pub use crypto::{CryptoValidator, KeyValidator};
 pub use errors::{SecurityError, SecurityResult};
 pub use input::{InputValidator, SanitizationConfig};
-pub use rate_limit::{RateLimiter, RateLimitConfig};
-pub use crypto::{CryptoValidator, KeyValidator};
-pub use policy::{SecurityPolicy, PolicyEnforcer};
-pub use audit::{AuditValidator, AuditConfig};
-pub use validation::{Validator, ValidationRule};
+pub use policy::{PolicyEnforcer, SecurityPolicy};
+pub use rate_limit::{RateLimitConfig, RateLimiter};
+pub use validation::{ValidationRule, Validator};
 
 /// Security context for operations
 #[derive(Debug, Clone)]
@@ -100,7 +100,7 @@ impl Default for SecurityConfig {
             enable_crypto_validation: true,
             enable_audit_validation: true,
             max_request_size: 10 * 1024 * 1024, // 10MB
-            session_timeout_seconds: 3600, // 1 hour
+            session_timeout_seconds: 3600,      // 1 hour
             password_min_length: 12,
             password_require_special: true,
             enable_cors: false,
@@ -122,7 +122,10 @@ mod tests {
         assert_eq!(ctx.user_id, "user123");
         assert_eq!(ctx.ip_address, "192.168.1.1");
         assert_eq!(ctx.session_id, Some("sess_abc123".to_string()));
-        assert_eq!(ctx.metadata.get("request_id"), Some(&"req_xyz789".to_string()));
+        assert_eq!(
+            ctx.metadata.get("request_id"),
+            Some(&"req_xyz789".to_string())
+        );
     }
 
     #[test]

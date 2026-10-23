@@ -7,7 +7,8 @@
 //! - Request/response sanitization
 
 use axum::{
-    extract::{ConnectInfo, Request, State},
+    body::{to_bytes, Body},
+    extract::{ConnectInfo, OriginalUri, Request, State},
     http::{HeaderMap, StatusCode},
     middleware::Next,
     response::{IntoResponse, Response},
@@ -16,6 +17,7 @@ use axum::{
 use llm_config_security::{
     InputValidator, PolicyEnforcer, RateLimiter, SecurityContext, SecurityError,
 };
+use percent_encoding::percent_decode_str;
 use serde_json::json;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -58,6 +60,18 @@ impl Default for SecurityState {
     }
 }
 
+/// Validate the same single percent-decoded representation used by Axum's Path
+/// extractor. Otherwise URL-encoding could conceal an attack from the validator.
+fn validate_uri_component(validator: &InputValidator, value: &str) -> Result<(), SecurityResponse> {
+    let decoded = percent_decode_str(value).decode_utf8().map_err(|_| {
+        SecurityResponse::new(StatusCode::BAD_REQUEST, "Invalid URI encoding".into())
+    })?;
+    validator
+        .validate(&decoded)
+        .map_err(|e| SecurityResponse::from_security_error(e, StatusCode::BAD_REQUEST))?;
+    Ok(())
+}
+
 /// Rate limiting middleware
 ///
 /// Checks requests against rate limits and automatically bans abusive IPs
@@ -95,17 +109,11 @@ pub async fn input_validation_middleware(
     let query = uri.query().unwrap_or("");
 
     // Validate path
-    security
-        .input_validator
-        .validate(path)
-        .map_err(|e| SecurityResponse::from_security_error(e, StatusCode::BAD_REQUEST))?;
+    validate_uri_component(&security.input_validator, path)?;
 
     // Validate query parameters
     if !query.is_empty() {
-        security
-            .input_validator
-            .validate(query)
-            .map_err(|e| SecurityResponse::from_security_error(e, StatusCode::BAD_REQUEST))?;
+        validate_uri_component(&security.input_validator, query)?;
     }
 
     Ok(next.run(request).await)
@@ -162,10 +170,17 @@ pub async fn policy_enforcement_middleware(
     }
 
     // Check endpoint access
-    let endpoint = request.uri().path();
+    let endpoint = request
+        .extensions()
+        .get::<OriginalUri>()
+        .map(|uri| uri.0.path())
+        .unwrap_or_else(|| request.uri().path());
+    let endpoint = percent_decode_str(endpoint).decode_utf8().map_err(|_| {
+        SecurityResponse::new(StatusCode::BAD_REQUEST, "Invalid URI encoding".into())
+    })?;
     security
         .policy_enforcer
-        .check_endpoint(endpoint)
+        .check_endpoint(&endpoint)
         .map_err(|e| SecurityResponse::from_security_error(e, StatusCode::FORBIDDEN))?;
 
     Ok(next.run(request).await)
@@ -236,24 +251,70 @@ pub async fn comprehensive_security_middleware(
         .map_err(|e| SecurityResponse::from_security_error(e, StatusCode::UPGRADE_REQUIRED))?;
 
     // 4. Policy enforcement - endpoint check
-    let endpoint = request.uri().path();
+    let endpoint = request
+        .extensions()
+        .get::<OriginalUri>()
+        .map(|uri| uri.0.path())
+        .unwrap_or_else(|| request.uri().path());
+    let endpoint = percent_decode_str(endpoint).decode_utf8().map_err(|_| {
+        SecurityResponse::new(StatusCode::BAD_REQUEST, "Invalid URI encoding".into())
+    })?;
     security
         .policy_enforcer
-        .check_endpoint(endpoint)
+        .check_endpoint(&endpoint)
         .map_err(|e| SecurityResponse::from_security_error(e, StatusCode::FORBIDDEN))?;
+
+    // Enforce browser policy even when this combined layer is used alone.
+    // Invalid/non-ASCII and repeated Origin values must not bypass the allowlist.
+    let origins = headers.get_all("origin");
+    if origins.iter().count() > 1 {
+        return Err(SecurityResponse::new(
+            StatusCode::FORBIDDEN,
+            "Invalid origin".into(),
+        ));
+    }
+    if let Some(origin) = origins.iter().next() {
+        let origin = origin
+            .to_str()
+            .map_err(|_| SecurityResponse::new(StatusCode::FORBIDDEN, "Invalid origin".into()))?;
+        security
+            .policy_enforcer
+            .check_origin(origin)
+            .map_err(|e| SecurityResponse::from_security_error(e, StatusCode::FORBIDDEN))?;
+    }
+
+    // Check declared length early, then bound actual bytes as well: chunked
+    // requests have no Content-Length and must obey exactly the same policy.
+    if let Some(length) = headers.get("content-length") {
+        let length = length
+            .to_str()
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .ok_or_else(|| {
+                SecurityResponse::new(StatusCode::BAD_REQUEST, "Invalid content length".into())
+            })?;
+        security
+            .policy_enforcer
+            .check_request_size(length)
+            .map_err(|e| SecurityResponse::from_security_error(e, StatusCode::PAYLOAD_TOO_LARGE))?;
+    }
+    let body = std::mem::take(request.body_mut());
+    let bytes = to_bytes(body, security.policy_enforcer.max_request_size())
+        .await
+        .map_err(|_| {
+            SecurityResponse::new(
+                StatusCode::PAYLOAD_TOO_LARGE,
+                "Request body exceeds policy or is unreadable".into(),
+            )
+        })?;
+    *request.body_mut() = Body::from(bytes);
 
     // 5. Input validation
     let uri = request.uri();
-    security
-        .input_validator
-        .validate(uri.path())
-        .map_err(|e| SecurityResponse::from_security_error(e, StatusCode::BAD_REQUEST))?;
+    validate_uri_component(&security.input_validator, uri.path())?;
 
     if let Some(query) = uri.query() {
-        security
-            .input_validator
-            .validate(query)
-            .map_err(|e| SecurityResponse::from_security_error(e, StatusCode::BAD_REQUEST))?;
+        validate_uri_component(&security.input_validator, query)?;
     }
 
     // 6. Create security context
@@ -302,24 +363,6 @@ impl IntoResponse for SecurityResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use llm_config_security::{RateLimitConfig, SecurityPolicy};
-    use std::net::{IpAddr, Ipv4Addr};
-
-    fn create_test_security_state() -> SecurityState {
-        let rate_limiter = RateLimiter::new(RateLimitConfig {
-            authenticated_rps: 100,
-            unauthenticated_rps: 10,
-            burst_size: 50,
-            window_seconds: 60,
-            ban_duration_seconds: 3600,
-            ban_threshold: 10,
-        });
-
-        let input_validator = InputValidator::default();
-        let policy_enforcer = PolicyEnforcer::new(SecurityPolicy::default());
-
-        SecurityState::with_components(rate_limiter, input_validator, policy_enforcer)
-    }
 
     #[test]
     fn test_security_state_creation() {
@@ -331,10 +374,7 @@ mod tests {
 
     #[test]
     fn test_security_response() {
-        let response = SecurityResponse::new(
-            StatusCode::FORBIDDEN,
-            "Access denied".to_string(),
-        );
+        let response = SecurityResponse::new(StatusCode::FORBIDDEN, "Access denied".to_string());
         assert_eq!(response.status, StatusCode::FORBIDDEN);
         assert_eq!(response.message, "Access denied");
     }

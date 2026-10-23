@@ -1,5 +1,5 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId, Throughput};
-use llm_config_crypto::{SecretKey, Algorithm, encrypt, decrypt};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use llm_config_crypto::{decrypt, encrypt, Algorithm, SecretKey};
 
 fn encryption_benchmark(c: &mut Criterion) {
     let key = SecretKey::generate(Algorithm::Aes256Gcm).unwrap();

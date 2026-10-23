@@ -101,8 +101,9 @@ mod tests {
         let collector = ProcessCollector::new(registry).unwrap();
 
         collector.update();
-        let uptime = collector.uptime();
-        assert!(uptime.as_secs() >= 0);
+        let first_uptime = collector.uptime();
+        let second_uptime = collector.uptime();
+        assert!(second_uptime >= first_uptime);
     }
 
     #[test]

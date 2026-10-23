@@ -179,8 +179,14 @@ mod tests {
 
     #[test]
     fn test_environment_parsing() {
-        assert_eq!("dev".parse::<Environment>().unwrap(), Environment::Development);
-        assert_eq!("production".parse::<Environment>().unwrap(), Environment::Production);
+        assert_eq!(
+            "dev".parse::<Environment>().unwrap(),
+            Environment::Development
+        );
+        assert_eq!(
+            "production".parse::<Environment>().unwrap(),
+            Environment::Production
+        );
         assert!("invalid".parse::<Environment>().is_err());
     }
 

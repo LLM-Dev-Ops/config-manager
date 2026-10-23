@@ -31,10 +31,7 @@ pub fn write_raw_results(
 }
 
 /// Write a single benchmark result to the raw output directory
-pub fn write_raw_result(
-    base_path: &Path,
-    result: &BenchmarkResult,
-) -> io::Result<PathBuf> {
+pub fn write_raw_result(base_path: &Path, result: &BenchmarkResult) -> io::Result<PathBuf> {
     let raw_dir = base_path.join(RAW_OUTPUT_DIR);
     fs::create_dir_all(&raw_dir)?;
 
@@ -63,7 +60,7 @@ pub fn read_raw_results(base_path: &Path) -> io::Result<Vec<BenchmarkResult>> {
         let entry = entry?;
         let path = entry.path();
 
-        if path.extension().map_or(false, |ext| ext == "json") {
+        if path.extension().is_some_and(|ext| ext == "json") {
             let content = fs::read_to_string(&path)?;
 
             // Try to parse as a single result or an array
@@ -76,7 +73,7 @@ pub fn read_raw_results(base_path: &Path) -> io::Result<Vec<BenchmarkResult>> {
     }
 
     // Sort by timestamp (most recent first)
-    results.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+    results.sort_by_key(|result| std::cmp::Reverse(result.timestamp));
 
     Ok(results)
 }
@@ -88,16 +85,11 @@ pub fn read_latest_result(
 ) -> io::Result<Option<BenchmarkResult>> {
     let results = read_raw_results(base_path)?;
 
-    Ok(results
-        .into_iter()
-        .find(|r| r.target_id == target_id))
+    Ok(results.into_iter().find(|r| r.target_id == target_id))
 }
 
 /// Write the benchmark run results and return the output path
-pub fn write_benchmark_run(
-    base_path: &Path,
-    results: &[BenchmarkResult],
-) -> io::Result<PathBuf> {
+pub fn write_benchmark_run(base_path: &Path, results: &[BenchmarkResult]) -> io::Result<PathBuf> {
     let output_dir = base_path.join(OUTPUT_DIR);
     fs::create_dir_all(&output_dir)?;
 
@@ -108,11 +100,7 @@ pub fn write_benchmark_run(
 
     // Write combined results file
     let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
-    let combined_path = write_raw_results(
-        base_path,
-        results,
-        &format!("run_{}", timestamp),
-    )?;
+    let combined_path = write_raw_results(base_path, results, &format!("run_{}", timestamp))?;
 
     Ok(combined_path)
 }
@@ -128,7 +116,10 @@ pub fn ensure_output_dirs(base_path: &Path) -> io::Result<()> {
         let mut file = fs::File::create(&summary_path)?;
         writeln!(file, "# Benchmark Summary")?;
         writeln!(file)?;
-        writeln!(file, "This file contains benchmark results for LLM Config Manager.")?;
+        writeln!(
+            file,
+            "This file contains benchmark results for LLM Config Manager."
+        )?;
         writeln!(file)?;
         writeln!(file, "## Latest Results")?;
         writeln!(file)?;

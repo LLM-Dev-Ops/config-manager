@@ -128,13 +128,11 @@ impl SecurityError {
             | Self::InvalidContentType(_)
             | Self::InvalidSession(_) => Severity::Medium,
 
-            Self::ConfigError(_)
-            | Self::AuditError(_)
-            | Self::General(_) => Severity::Low,
+            Self::ConfigError(_) | Self::AuditError(_) | Self::General(_) => Severity::Low,
 
-            Self::CryptoError(_)
-            | Self::CertificateError(_)
-            | Self::InsecureProtocol(_) => Severity::High,
+            Self::CryptoError(_) | Self::CertificateError(_) | Self::InsecureProtocol(_) => {
+                Severity::High
+            }
 
             Self::LdapInjectionAttempt | Self::RegexDosAttempt => Severity::Critical,
         }
@@ -155,9 +153,7 @@ impl SecurityError {
             | Self::PathTraversalAttempt
             | Self::LdapInjectionAttempt
             | Self::RegexDosAttempt
-            | Self::SuspiciousActivity(_) => {
-                "Request rejected due to security policy".to_string()
-            }
+            | Self::SuspiciousActivity(_) => "Request rejected due to security policy".to_string(),
 
             Self::RateLimitExceeded(_) => "Rate limit exceeded. Please try again later".to_string(),
 
@@ -167,9 +163,7 @@ impl SecurityError {
 
             Self::InvalidSession(_) => "Session expired. Please log in again".to_string(),
 
-            Self::WeakPassword(_) => {
-                "Password does not meet security requirements".to_string()
-            }
+            Self::WeakPassword(_) => "Password does not meet security requirements".to_string(),
 
             Self::RequestTooLarge(_) => "Request size too large".to_string(),
 

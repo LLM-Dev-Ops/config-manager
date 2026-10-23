@@ -66,15 +66,11 @@ impl BenchTarget for EncryptBenchmark {
             0.0
         };
 
-        BenchmarkResult::throughput(
-            self.id(),
-            duration.as_nanos(),
-            self.iterations as u64,
-        )
-        .with_metric("operation", serde_json::json!("encrypt"))
-        .with_metric("algorithm", serde_json::json!("AES-256-GCM"))
-        .with_metric("payload_size_bytes", serde_json::json!(self.payload_size))
-        .with_metric("throughput_bytes_per_sec", serde_json::json!(bytes_per_sec))
+        BenchmarkResult::throughput(self.id(), duration.as_nanos(), self.iterations as u64)
+            .with_metric("operation", serde_json::json!("encrypt"))
+            .with_metric("algorithm", serde_json::json!("AES-256-GCM"))
+            .with_metric("payload_size_bytes", serde_json::json!(self.payload_size))
+            .with_metric("throughput_bytes_per_sec", serde_json::json!(bytes_per_sec))
     }
 }
 
@@ -140,15 +136,11 @@ impl BenchTarget for DecryptBenchmark {
             0.0
         };
 
-        BenchmarkResult::throughput(
-            self.id(),
-            duration.as_nanos(),
-            self.iterations as u64,
-        )
-        .with_metric("operation", serde_json::json!("decrypt"))
-        .with_metric("algorithm", serde_json::json!("AES-256-GCM"))
-        .with_metric("payload_size_bytes", serde_json::json!(self.payload_size))
-        .with_metric("throughput_bytes_per_sec", serde_json::json!(bytes_per_sec))
+        BenchmarkResult::throughput(self.id(), duration.as_nanos(), self.iterations as u64)
+            .with_metric("operation", serde_json::json!("decrypt"))
+            .with_metric("algorithm", serde_json::json!("AES-256-GCM"))
+            .with_metric("payload_size_bytes", serde_json::json!(self.payload_size))
+            .with_metric("throughput_bytes_per_sec", serde_json::json!(bytes_per_sec))
     }
 }
 
@@ -197,13 +189,9 @@ impl BenchTarget for KeyGenerationBenchmark {
         }
         let duration = start.elapsed();
 
-        BenchmarkResult::throughput(
-            self.id(),
-            duration.as_nanos(),
-            self.iterations as u64,
-        )
-        .with_metric("operation", serde_json::json!("keygen"))
-        .with_metric("algorithm", serde_json::json!("AES-256-GCM"))
-        .with_metric("key_size_bits", serde_json::json!(256))
+        BenchmarkResult::throughput(self.id(), duration.as_nanos(), self.iterations as u64)
+            .with_metric("operation", serde_json::json!("keygen"))
+            .with_metric("algorithm", serde_json::json!("AES-256-GCM"))
+            .with_metric("key_size_bits", serde_json::json!(256))
     }
 }

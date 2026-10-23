@@ -33,8 +33,8 @@
 //! ```
 
 use super::traits::{
-    ConfigProvider, SecretProvider, ProviderError, ProviderResult,
-    ProviderValue, ProviderHealth, ValueMetadata,
+    ConfigProvider, ProviderError, ProviderHealth, ProviderResult, ProviderValue, SecretProvider,
+    ValueMetadata,
 };
 use llm_config_crypto::{decrypt, encrypt, EncryptedData, SecretKey};
 use serde::{Deserialize, Serialize};
@@ -174,13 +174,14 @@ impl EncryptedFileProvider {
 
     /// Save the current configuration to the encrypted file
     pub fn save(&self) -> ProviderResult<()> {
-        let cache = self.cache.read().map_err(|e| {
-            ProviderError::Other(format!("Failed to acquire lock: {}", e))
-        })?;
+        let cache = self
+            .cache
+            .read()
+            .map_err(|e| ProviderError::Other(format!("Failed to acquire lock: {}", e)))?;
 
-        let content = cache.as_ref().ok_or_else(|| {
-            ProviderError::Other("No configuration loaded".to_string())
-        })?;
+        let content = cache
+            .as_ref()
+            .ok_or_else(|| ProviderError::Other("No configuration loaded".to_string()))?;
 
         let json = serde_json::to_vec(content)
             .map_err(|e| ProviderError::SerializationError(e.to_string()))?;
@@ -207,17 +208,19 @@ impl EncryptedFileProvider {
     /// Ensure configuration is loaded into cache
     fn ensure_loaded(&self) -> ProviderResult<()> {
         let loaded = {
-            let cache = self.cache.read().map_err(|e| {
-                ProviderError::Other(format!("Failed to acquire lock: {}", e))
-            })?;
+            let cache = self
+                .cache
+                .read()
+                .map_err(|e| ProviderError::Other(format!("Failed to acquire lock: {}", e)))?;
             cache.is_some()
         };
 
         if !loaded {
             let content = self.load()?;
-            let mut cache = self.cache.write().map_err(|e| {
-                ProviderError::Other(format!("Failed to acquire lock: {}", e))
-            })?;
+            let mut cache = self
+                .cache
+                .write()
+                .map_err(|e| ProviderError::Other(format!("Failed to acquire lock: {}", e)))?;
             *cache = Some(content);
         }
 
@@ -246,13 +249,14 @@ impl ConfigProvider for EncryptedFileProvider {
     async fn get(&self, namespace: &str, key: &str) -> ProviderResult<ProviderValue> {
         self.ensure_loaded()?;
 
-        let cache = self.cache.read().map_err(|e| {
-            ProviderError::Other(format!("Failed to acquire lock: {}", e))
-        })?;
+        let cache = self
+            .cache
+            .read()
+            .map_err(|e| ProviderError::Other(format!("Failed to acquire lock: {}", e)))?;
 
-        let content = cache.as_ref().ok_or_else(|| {
-            ProviderError::Other("Configuration not loaded".to_string())
-        })?;
+        let content = cache
+            .as_ref()
+            .ok_or_else(|| ProviderError::Other("Configuration not loaded".to_string()))?;
 
         match content.get(namespace, key) {
             Some(value) => {
@@ -269,16 +273,21 @@ impl ConfigProvider for EncryptedFileProvider {
         }
     }
 
-    async fn list(&self, namespace: &str, prefix: Option<&str>) -> ProviderResult<HashMap<String, ProviderValue>> {
+    async fn list(
+        &self,
+        namespace: &str,
+        prefix: Option<&str>,
+    ) -> ProviderResult<HashMap<String, ProviderValue>> {
         self.ensure_loaded()?;
 
-        let cache = self.cache.read().map_err(|e| {
-            ProviderError::Other(format!("Failed to acquire lock: {}", e))
-        })?;
+        let cache = self
+            .cache
+            .read()
+            .map_err(|e| ProviderError::Other(format!("Failed to acquire lock: {}", e)))?;
 
-        let content = cache.as_ref().ok_or_else(|| {
-            ProviderError::Other("Configuration not loaded".to_string())
-        })?;
+        let content = cache
+            .as_ref()
+            .ok_or_else(|| ProviderError::Other("Configuration not loaded".to_string()))?;
 
         let mut result = HashMap::new();
 
@@ -301,9 +310,10 @@ impl ConfigProvider for EncryptedFileProvider {
 
     async fn refresh(&self) -> ProviderResult<()> {
         let content = self.load()?;
-        let mut cache = self.cache.write().map_err(|e| {
-            ProviderError::Other(format!("Failed to acquire lock: {}", e))
-        })?;
+        let mut cache = self
+            .cache
+            .write()
+            .map_err(|e| ProviderError::Other(format!("Failed to acquire lock: {}", e)))?;
         *cache = Some(content);
         Ok(())
     }
@@ -335,13 +345,14 @@ impl SecretProvider for EncryptedFileProvider {
         self.ensure_loaded()?;
 
         {
-            let mut cache = self.cache.write().map_err(|e| {
-                ProviderError::Other(format!("Failed to acquire lock: {}", e))
-            })?;
+            let mut cache = self
+                .cache
+                .write()
+                .map_err(|e| ProviderError::Other(format!("Failed to acquire lock: {}", e)))?;
 
-            let content = cache.as_mut().ok_or_else(|| {
-                ProviderError::Other("Configuration not loaded".to_string())
-            })?;
+            let content = cache
+                .as_mut()
+                .ok_or_else(|| ProviderError::Other("Configuration not loaded".to_string()))?;
 
             content.set(namespace, key, serde_json::Value::String(value.to_string()));
         }
@@ -361,13 +372,14 @@ impl SecretProvider for EncryptedFileProvider {
         self.ensure_loaded()?;
 
         {
-            let mut cache = self.cache.write().map_err(|e| {
-                ProviderError::Other(format!("Failed to acquire lock: {}", e))
-            })?;
+            let mut cache = self
+                .cache
+                .write()
+                .map_err(|e| ProviderError::Other(format!("Failed to acquire lock: {}", e)))?;
 
-            let content = cache.as_mut().ok_or_else(|| {
-                ProviderError::Other("Configuration not loaded".to_string())
-            })?;
+            let content = cache
+                .as_mut()
+                .ok_or_else(|| ProviderError::Other("Configuration not loaded".to_string()))?;
 
             content.remove(namespace, key);
         }
@@ -453,10 +465,7 @@ mod tests {
 
         let provider = EncryptedFileProvider::create(&path, key).unwrap();
 
-        provider
-            .set_secret("test", "key", "value")
-            .await
-            .unwrap();
+        provider.set_secret("test", "key", "value").await.unwrap();
 
         provider.delete_secret("test", "key").await.unwrap();
 
@@ -472,9 +481,15 @@ mod tests {
 
         let provider = EncryptedFileProvider::create(&path, key).unwrap();
 
-        provider.set_secret("db", "host", "localhost").await.unwrap();
+        provider
+            .set_secret("db", "host", "localhost")
+            .await
+            .unwrap();
         provider.set_secret("db", "port", "5432").await.unwrap();
-        provider.set_secret("db", "password", "secret").await.unwrap();
+        provider
+            .set_secret("db", "password", "secret")
+            .await
+            .unwrap();
         provider.set_secret("other", "key", "value").await.unwrap();
 
         let values = provider.list("db", None).await.unwrap();

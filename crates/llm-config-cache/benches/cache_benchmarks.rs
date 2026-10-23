@@ -71,7 +71,11 @@ fn bench_cache_get_l1_hit(c: &mut Criterion) {
     c.bench_function("cache_get_l1_hit", |b| {
         b.iter(|| {
             cache
-                .get(black_box("bench/ns"), black_box("key50"), black_box("development"))
+                .get(
+                    black_box("bench/ns"),
+                    black_box("key50"),
+                    black_box("development"),
+                )
                 .unwrap()
         });
     });
@@ -93,7 +97,11 @@ fn bench_cache_get_l2_hit(c: &mut Criterion) {
     c.bench_function("cache_get_l2_hit", |b| {
         b.iter(|| {
             cache
-                .get(black_box("bench/ns"), black_box("key50"), black_box("development"))
+                .get(
+                    black_box("bench/ns"),
+                    black_box("key50"),
+                    black_box("development"),
+                )
                 .unwrap()
         });
     });
@@ -153,7 +161,8 @@ fn bench_cache_mixed_operations(c: &mut Criterion) {
                 match i % 10 {
                     0 => {
                         // Invalidate
-                        let _ = cache.invalidate("bench/ns", &format!("key{}", i % 50), "development");
+                        let _ =
+                            cache.invalidate("bench/ns", &format!("key{}", i % 50), "development");
                     }
                     1 | 2 => {
                         // Write
@@ -192,7 +201,11 @@ fn bench_cache_promotion(c: &mut Criterion) {
             // Access entries that will be promoted from L2 to L1
             for i in 0..5 {
                 cache
-                    .get(black_box("bench/ns"), black_box(&format!("key{}", i * 20)), black_box("development"))
+                    .get(
+                        black_box("bench/ns"),
+                        black_box(&format!("key{}", i * 20)),
+                        black_box("development"),
+                    )
                     .unwrap();
             }
             // Clear L1 for next iteration

@@ -11,11 +11,13 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
 
 jobs:
   security-scan:
     name: Security Code Analysis
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     permissions:
       contents: read
       security-events: write
@@ -23,32 +25,30 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f
         with:
-          toolchain: stable
-          profile: minimal
-          override: true
+          toolchain: 1.99.1
 
       - name: Cache cargo registry
-        uses: actions/cache@v3
+        uses: actions/cache@3edfce9056124e459a23f683a21433670d47daca
         with:
           path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.toml') }}
 
       - name: Cache cargo index
-        uses: actions/cache@v3
+        uses: actions/cache@3edfce9056124e459a23f683a21433670d47daca
         with:
           path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.toml') }}
 
       - name: Cache cargo build
-        uses: actions/cache@v3
+        uses: actions/cache@3edfce9056124e459a23f683a21433670d47daca
         with:
           path: target
-          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.toml') }}
 
       - name: Build devtools
         run: cargo build --package llm-config-devtools --bins
@@ -61,7 +61,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload SARIF to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@7a6e2f798f401f9e1febf447764fca5bedb6cf66
         with:
           sarif_file: results.sarif
           category: llm-security-scan
@@ -73,7 +73,7 @@ jobs:
             --output security-report.md
 
       - name: Upload security report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: security-report
           path: security-report.md
@@ -85,21 +85,22 @@ jobs:
 
   dependency-scan:
     name: Dependency Vulnerability Scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f
         with:
-          toolchain: stable
-          profile: minimal
-          override: true
+          toolchain: 1.99.1
 
       - name: Install cargo-audit
-        run: cargo install cargo-audit
+        run: cargo install cargo-audit --version 0.22.2 --locked
 
       - name: Build devtools
         run: cargo build --package llm-config-devtools --bins
@@ -108,11 +109,3 @@ jobs:
         run: |
           cargo run --bin llm-dependency-scan -- \
             --fail-on-vulnerabilities
-
-      - name: Check for outdated dependencies
-        run: |
-          cargo install cargo-outdated || true
-          cargo run --bin llm-dependency-scan -- \
-            --check-outdated \
-            --fail-on-vulnerabilities=false
-        continue-on-error: true

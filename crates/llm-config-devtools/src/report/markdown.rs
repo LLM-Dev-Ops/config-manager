@@ -2,8 +2,12 @@
 
 use crate::error::Result;
 use crate::security::{SecurityReport, Severity};
+use std::fmt::Write as _;
 
 /// Generate a Markdown report.
+///
+/// # Errors
+/// Returns an error if report generation cannot be completed.
 pub fn generate(report: &SecurityReport) -> Result<String> {
     let mut md = String::new();
 
@@ -11,28 +15,36 @@ pub fn generate(report: &SecurityReport) -> Result<String> {
     md.push_str("# Security Scan Report\n\n");
 
     // Metadata
-    md.push_str(&format!("**Generated**: {}\n", report.timestamp.format("%Y-%m-%d %H:%M:%S UTC")));
-    md.push_str(&format!("**Project**: {}\n", report.project_root.display()));
+    let _ = writeln!(
+        md,
+        "**Generated**: {}",
+        report.timestamp.format("%Y-%m-%d %H:%M:%S UTC")
+    );
+    let _ = writeln!(md, "**Project**: {}", report.project_root.display());
 
     if let Some(commit) = &report.git_commit {
-        md.push_str(&format!("**Commit**: `{}`\n", commit));
+        let _ = writeln!(md, "**Commit**: `{commit}`");
     }
     if let Some(branch) = &report.git_branch {
-        md.push_str(&format!("**Branch**: `{}`\n", branch));
+        let _ = writeln!(md, "**Branch**: `{branch}`");
     }
 
     md.push_str("\n---\n\n");
 
     // Summary
     md.push_str("## Summary\n\n");
-    md.push_str(&format!("- **Total Findings**: {}\n", report.summary.total));
-    md.push_str(&format!("- **Critical**: {} 🔴\n", report.summary.critical));
-    md.push_str(&format!("- **High**: {} 🟠\n", report.summary.high));
-    md.push_str(&format!("- **Medium**: {} 🟡\n", report.summary.medium));
-    md.push_str(&format!("- **Low**: {} 🟢\n", report.summary.low));
-    md.push_str(&format!("- **Scan Duration**: {:.2}s\n", report.summary.duration_seconds));
+    let _ = writeln!(md, "- **Total Findings**: {}", report.summary.total);
+    let _ = writeln!(md, "- **Critical**: {} 🔴", report.summary.critical);
+    let _ = writeln!(md, "- **High**: {} 🟠", report.summary.high);
+    let _ = writeln!(md, "- **Medium**: {} 🟡", report.summary.medium);
+    let _ = writeln!(md, "- **Low**: {} 🟢", report.summary.low);
+    let _ = writeln!(
+        md,
+        "- **Scan Duration**: {:.2}s",
+        report.summary.duration_seconds
+    );
 
-    md.push_str("\n");
+    md.push('\n');
 
     // Status
     if report.summary.total == 0 {
@@ -52,7 +64,12 @@ pub fn generate(report: &SecurityReport) -> Result<String> {
     md.push_str("---\n\n");
 
     // Findings by severity
-    for severity in [Severity::Critical, Severity::High, Severity::Medium, Severity::Low] {
+    for severity in [
+        Severity::Critical,
+        Severity::High,
+        Severity::Medium,
+        Severity::Low,
+    ] {
         let severity_findings: Vec<_> = report
             .findings
             .iter()
@@ -70,20 +87,20 @@ pub fn generate(report: &SecurityReport) -> Result<String> {
             Severity::Low => "🟢",
         };
 
-        md.push_str(&format!("## {} {} Severity Findings\n\n", emoji, severity));
+        let _ = write!(md, "## {emoji} {severity} Severity Findings\n\n");
 
         for (i, finding) in severity_findings.iter().enumerate() {
-            md.push_str(&format!("### {}.{} {}\n\n", severity, i + 1, finding.title));
+            let _ = write!(md, "### {}.{} {}\n\n", severity, i + 1, finding.title);
 
-            md.push_str(&format!("- **Category**: `{}`\n", finding.category));
-            md.push_str(&format!("- **Severity**: {}\n", severity));
-            md.push_str(&format!("- **File**: `{}`\n", finding.file.display()));
+            let _ = writeln!(md, "- **Category**: `{}`", finding.category);
+            let _ = writeln!(md, "- **Severity**: {severity}");
+            let _ = writeln!(md, "- **File**: `{}`", finding.file.display());
 
             if let Some(line) = finding.line {
-                md.push_str(&format!("- **Line**: {}\n", line));
+                let _ = writeln!(md, "- **Line**: {line}");
             }
 
-            md.push_str(&format!("\n**Message**: {}\n\n", finding.message));
+            let _ = write!(md, "\n**Message**: {}\n\n", finding.message);
 
             if let Some(snippet) = &finding.snippet {
                 md.push_str("**Code**:\n");
@@ -93,7 +110,7 @@ pub fn generate(report: &SecurityReport) -> Result<String> {
             }
 
             if let Some(recommendation) = &finding.recommendation {
-                md.push_str(&format!("**Recommendation**: {}\n\n", recommendation));
+                let _ = write!(md, "**Recommendation**: {recommendation}\n\n");
             }
 
             md.push_str("---\n\n");

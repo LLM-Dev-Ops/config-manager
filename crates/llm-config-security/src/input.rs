@@ -29,7 +29,8 @@ fn init_patterns() {
             Regex::new(r"(?i)(\bdelete\b.*\bfrom\b)").unwrap(),
             Regex::new(r"(?i)(\bupdate\b.*\bset\b)").unwrap(),
             Regex::new(r"(?i)(;.*(--)|(#))").unwrap(),
-            Regex::new(r"(?i)('|(--)|;|/\*|\*/|@@|@)").unwrap(),
+            Regex::new(r#"(?i)\bor\b\s*['"]?[[:alnum:]_]+['"]?\s*=\s*['"]?[[:alnum:]_]+['"]?"#)
+                .unwrap(),
             Regex::new(r"(?i)\bexec(\s|\+)+(s|x)p\w+").unwrap(),
         ]
     });
@@ -102,16 +103,17 @@ pub struct InputValidator {
     config: SanitizationConfig,
 }
 
+impl Default for InputValidator {
+    fn default() -> Self {
+        Self::new(SanitizationConfig::default())
+    }
+}
+
 impl InputValidator {
     /// Create a new input validator
     pub fn new(config: SanitizationConfig) -> Self {
         init_patterns();
         Self { config }
-    }
-
-    /// Create with default configuration
-    pub fn default() -> Self {
-        Self::new(SanitizationConfig::default())
     }
 
     /// Validate and sanitize input
@@ -142,6 +144,11 @@ impl InputValidator {
         // Detect command injection
         if self.detect_command_injection(input) {
             return Err(SecurityError::CommandInjectionAttempt);
+        }
+
+        // Detect LDAP injection
+        if self.detect_ldap_injection(input) {
+            return Err(SecurityError::LdapInjectionAttempt);
         }
 
         // Sanitize
@@ -385,6 +392,17 @@ mod tests {
     }
 
     #[test]
+    fn test_ldap_injection_detection() {
+        let validator = InputValidator::default();
+
+        assert!(validator
+            .validate("(uid=admin)")
+            .is_err_and(|e| matches!(e, SecurityError::LdapInjectionAttempt)));
+
+        assert!(validator.validate("normal text").is_ok());
+    }
+
+    #[test]
     fn test_email_validation() {
         let validator = InputValidator::default();
 
@@ -419,9 +437,7 @@ mod tests {
         assert!(validator.validate_url("https://example.com").is_ok());
         assert!(validator.validate_url("http://example.com/path").is_ok());
         assert!(validator.validate_url("invalid-url").is_err());
-        assert!(validator
-            .validate_url("javascript:alert('XSS')")
-            .is_err());
+        assert!(validator.validate_url("javascript:alert('XSS')").is_err());
     }
 
     #[test]

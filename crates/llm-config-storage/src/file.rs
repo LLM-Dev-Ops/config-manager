@@ -88,8 +88,7 @@ impl FileStorage {
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
 
-        serde_json::from_str(&contents)
-            .map_err(|e| StorageError::SerializationError(e.to_string()))
+        serde_json::from_str(&contents).map_err(|e| StorageError::SerializationError(e.to_string()))
     }
 
     /// Atomically write a config to a file
@@ -128,12 +127,7 @@ impl FileStorage {
     }
 
     /// Get a configuration
-    pub fn get(
-        &self,
-        namespace: &str,
-        key: &str,
-        env: Environment,
-    ) -> Result<Option<ConfigEntry>> {
+    pub fn get(&self, namespace: &str, key: &str, env: Environment) -> Result<Option<ConfigEntry>> {
         let storage_key = self.make_key(namespace, key, env);
         let index = self.index.read().unwrap();
 
@@ -224,8 +218,8 @@ impl FileStorage {
             }
         }
 
-        // Sort by version number descending
-        versions.sort_by(|a, b| b.version.cmp(&a.version));
+        // Sort by version number descending.
+        versions.sort_by_key(|entry| std::cmp::Reverse(entry.version));
 
         Ok(versions)
     }
@@ -268,7 +262,7 @@ mod tests {
     #[test]
     fn test_file_storage_creation() {
         let temp_dir = TempDir::new().unwrap();
-        let storage = FileStorage::new(temp_dir.path()).unwrap();
+        let _storage = FileStorage::new(temp_dir.path()).unwrap();
 
         assert!(temp_dir.path().join("configs").exists());
         assert!(temp_dir.path().join("versions").exists());
@@ -340,7 +334,9 @@ mod tests {
             .unwrap()
             .is_some());
 
-        let deleted = storage.delete("test/ns", "key", Environment::Development).unwrap();
+        let deleted = storage
+            .delete("test/ns", "key", Environment::Development)
+            .unwrap();
         assert!(deleted);
 
         assert!(storage

@@ -40,35 +40,27 @@
 //! ```
 
 use super::traits::{
-    ConfigProvider, SecretProvider, ProviderError, ProviderResult,
-    ProviderValue, ProviderHealth, ValueMetadata,
+    ConfigProvider, ProviderError, ProviderHealth, ProviderResult, ProviderValue, SecretProvider,
+    ValueMetadata,
 };
 use std::collections::HashMap;
 use std::time::Duration;
 
 /// Authentication method for Vault
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum VaultAuthMethod {
     /// Direct token authentication
     Token(String),
     /// AppRole authentication with role_id and secret_id
-    AppRole {
-        role_id: String,
-        secret_id: String,
-    },
+    AppRole { role_id: String, secret_id: String },
     /// Kubernetes service account authentication
     Kubernetes {
         role: String,
         jwt_path: Option<String>,
     },
     /// No authentication configured (stub mode)
+    #[default]
     None,
-}
-
-impl Default for VaultAuthMethod {
-    fn default() -> Self {
-        VaultAuthMethod::None
-    }
 }
 
 /// Configuration for HashiCorp Vault provider
@@ -169,7 +161,11 @@ impl VaultConfig {
     }
 
     /// Set AppRole authentication
-    pub fn with_approle(mut self, role_id: impl Into<String>, secret_id: impl Into<String>) -> Self {
+    pub fn with_approle(
+        mut self,
+        role_id: impl Into<String>,
+        secret_id: impl Into<String>,
+    ) -> Self {
         self.auth = VaultAuthMethod::AppRole {
             role_id: role_id.into(),
             secret_id: secret_id.into(),
@@ -233,14 +229,12 @@ impl VaultProvider {
     /// For KV v1: `{mount}/{namespace}/{key}`
     #[allow(dead_code)]
     fn build_path(&self, namespace: &str, key: &str) -> String {
-        let data_prefix = if self.config.kv_version == 2 { "/data" } else { "" };
-        format!(
-            "{}{}/{}/{}",
-            self.config.mount,
-            data_prefix,
-            namespace,
-            key
-        )
+        let data_prefix = if self.config.kv_version == 2 {
+            "/data"
+        } else {
+            ""
+        };
+        format!("{}{}/{}/{}", self.config.mount, data_prefix, namespace, key)
     }
 
     /// Stub: Get secret from environment variable fallback
@@ -248,8 +242,8 @@ impl VaultProvider {
         // For local development, fall back to env vars
         let env_key = format!(
             "VAULT_{}_{}",
-            namespace.to_uppercase().replace('/', "_").replace('-', "_"),
-            key.to_uppercase().replace('/', "_").replace('-', "_")
+            namespace.to_uppercase().replace(['/', '-'], "_"),
+            key.to_uppercase().replace(['/', '-'], "_")
         );
 
         std::env::var(&env_key).map_err(|_| ProviderError::NotFound {
@@ -295,11 +289,14 @@ impl ConfigProvider for VaultProvider {
         let value = self.get_stub(namespace, key)?;
         let path = self.build_path(namespace, key);
 
-        Ok(ProviderValue::secret(value, "vault")
-            .with_version(format!("path:{}", path)))
+        Ok(ProviderValue::secret(value, "vault").with_version(format!("path:{}", path)))
     }
 
-    async fn list(&self, namespace: &str, _prefix: Option<&str>) -> ProviderResult<HashMap<String, ProviderValue>> {
+    async fn list(
+        &self,
+        namespace: &str,
+        _prefix: Option<&str>,
+    ) -> ProviderResult<HashMap<String, ProviderValue>> {
         // Stub: Vault LIST operation would be used here
         // GET {mount}/metadata/{namespace}?list=true (for KV v2)
         let _ = namespace;
@@ -318,9 +315,15 @@ impl ConfigProvider for VaultProvider {
         if self.is_configured() {
             Ok(ProviderHealth::healthy("vault"))
         } else if self.config.address.is_some() {
-            Ok(ProviderHealth::unhealthy("vault", "Authentication not configured"))
+            Ok(ProviderHealth::unhealthy(
+                "vault",
+                "Authentication not configured",
+            ))
         } else {
-            Ok(ProviderHealth::unhealthy("vault", "VAULT_ADDR not configured"))
+            Ok(ProviderHealth::unhealthy(
+                "vault",
+                "VAULT_ADDR not configured",
+            ))
         }
     }
 }
@@ -345,8 +348,8 @@ impl SecretProvider for VaultProvider {
 
         let env_key = format!(
             "VAULT_{}_{}",
-            namespace.to_uppercase().replace('/', "_").replace('-', "_"),
-            key.to_uppercase().replace('/', "_").replace('-', "_")
+            namespace.to_uppercase().replace(['/', '-'], "_"),
+            key.to_uppercase().replace(['/', '-'], "_")
         );
         std::env::set_var(&env_key, value);
 
@@ -369,8 +372,8 @@ impl SecretProvider for VaultProvider {
 
         let env_key = format!(
             "VAULT_{}_{}",
-            namespace.to_uppercase().replace('/', "_").replace('-', "_"),
-            key.to_uppercase().replace('/', "_").replace('-', "_")
+            namespace.to_uppercase().replace(['/', '-'], "_"),
+            key.to_uppercase().replace(['/', '-'], "_")
         );
         std::env::remove_var(&env_key);
         Ok(())
@@ -402,7 +405,10 @@ mod tests {
 
         let config = VaultConfig::from_env();
 
-        assert_eq!(config.address, Some("https://vault.example.com:8200".to_string()));
+        assert_eq!(
+            config.address,
+            Some("https://vault.example.com:8200".to_string())
+        );
         assert!(matches!(config.auth, VaultAuthMethod::Token(_)));
         assert_eq!(config.mount, "kv");
         assert_eq!(config.kv_version, 2);
@@ -504,8 +510,7 @@ mod tests {
         assert!(health.message.unwrap().contains("VAULT_ADDR"));
 
         // Address but no auth
-        let config = VaultConfig::default()
-            .with_address("https://vault.example.com:8200");
+        let config = VaultConfig::default().with_address("https://vault.example.com:8200");
         let provider = VaultProvider::new(config).unwrap();
         let health = provider.health_check().unwrap();
         assert!(!health.healthy);
@@ -529,7 +534,10 @@ mod tests {
         let provider = VaultProvider::new(config).unwrap();
 
         // Set secret
-        let metadata = provider.set_secret("app", "api_key", "key123").await.unwrap();
+        let metadata = provider
+            .set_secret("app", "api_key", "key123")
+            .await
+            .unwrap();
         assert!(metadata.is_secret);
         assert_eq!(metadata.source, "vault");
 

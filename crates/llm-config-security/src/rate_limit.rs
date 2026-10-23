@@ -73,34 +73,28 @@ impl RateLimiter {
     /// Create a new rate limiter
     pub fn new(config: RateLimitConfig) -> Self {
         let authenticated_quota = Quota::per_second(
-            NonZeroU32::new(config.authenticated_rps).unwrap_or(NonZeroU32::new(100).unwrap())
-        ).allow_burst(
-            NonZeroU32::new(config.burst_size).unwrap_or(NonZeroU32::new(50).unwrap())
-        );
+            NonZeroU32::new(config.authenticated_rps).unwrap_or(NonZeroU32::new(100).unwrap()),
+        )
+        .allow_burst(NonZeroU32::new(config.burst_size).unwrap_or(NonZeroU32::new(50).unwrap()));
 
         let unauthenticated_quota = Quota::per_second(
-            NonZeroU32::new(config.unauthenticated_rps).unwrap_or(NonZeroU32::new(10).unwrap())
-        ).allow_burst(
-            NonZeroU32::new(config.burst_size / 5).unwrap_or(NonZeroU32::new(10).unwrap())
+            NonZeroU32::new(config.unauthenticated_rps).unwrap_or(NonZeroU32::new(10).unwrap()),
+        )
+        .allow_burst(
+            NonZeroU32::new(config.burst_size / 5).unwrap_or(NonZeroU32::new(10).unwrap()),
         );
 
         Self {
             config,
             authenticated_limiter: Arc::new(GovernorRateLimiter::direct(authenticated_quota)),
-            unauthenticated_limiter: Arc::new(GovernorRateLimiter::direct(
-                unauthenticated_quota,
-            )),
+            unauthenticated_limiter: Arc::new(GovernorRateLimiter::direct(unauthenticated_quota)),
             per_ip_limiters: Arc::new(RwLock::new(HashMap::new())),
             banned_ips: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
     /// Check if a request is allowed
-    pub fn check_request(
-        &self,
-        ip: IpAddr,
-        authenticated: bool,
-    ) -> SecurityResult<()> {
+    pub fn check_request(&self, ip: IpAddr, authenticated: bool) -> SecurityResult<()> {
         // Check if IP is banned
         if self.is_banned(ip) {
             return Err(SecurityError::RateLimitExceeded(
@@ -128,12 +122,12 @@ impl RateLimiter {
             let quota = if authenticated {
                 Quota::per_second(
                     NonZeroU32::new(self.config.authenticated_rps / 10)
-                        .unwrap_or(NonZeroU32::new(10).unwrap())
+                        .unwrap_or(NonZeroU32::new(10).unwrap()),
                 )
             } else {
                 Quota::per_second(
                     NonZeroU32::new(self.config.unauthenticated_rps)
-                        .unwrap_or(NonZeroU32::new(10).unwrap())
+                        .unwrap_or(NonZeroU32::new(10).unwrap()),
                 )
             }
             .allow_burst(NonZeroU32::new(10).unwrap());
@@ -299,7 +293,7 @@ mod tests {
         let config = RateLimitConfig {
             authenticated_rps: 100,
             unauthenticated_rps: 10,
-            burst_size: 20,
+            burst_size: 100,
             ..Default::default()
         };
 

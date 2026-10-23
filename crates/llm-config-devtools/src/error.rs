@@ -35,14 +35,14 @@ pub enum DevtoolsError {
     #[error("Invalid project root: {path}")]
     InvalidProjectRoot {
         /// The invalid path
-        path: PathBuf
+        path: PathBuf,
     },
 
     /// No Cargo.toml found in project.
     #[error("No Cargo.toml found at: {path}")]
     NoCargoToml {
         /// The path where Cargo.toml was expected
-        path: PathBuf
+        path: PathBuf,
     },
 
     /// Serialization error.
@@ -80,19 +80,19 @@ pub enum DevtoolsError {
 
 impl From<ignore::Error> for DevtoolsError {
     fn from(err: ignore::Error) -> Self {
-        DevtoolsError::Ignore(err.to_string())
+        Self::Ignore(err.to_string())
     }
 }
 
 impl From<serde_json::Error> for DevtoolsError {
     fn from(err: serde_json::Error) -> Self {
-        DevtoolsError::Serialization(err.to_string())
+        Self::Serialization(err.to_string())
     }
 }
 
 impl From<serde_yaml::Error> for DevtoolsError {
     fn from(err: serde_yaml::Error) -> Self {
-        DevtoolsError::Serialization(err.to_string())
+        Self::Serialization(err.to_string())
     }
 }
 

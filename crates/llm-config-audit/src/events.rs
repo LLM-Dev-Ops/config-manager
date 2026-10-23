@@ -89,10 +89,7 @@ pub enum AuditEventType {
     },
 
     /// System event
-    SystemEvent {
-        component: String,
-        message: String,
-    },
+    SystemEvent { component: String, message: String },
 
     /// Security event
     SecurityEvent {

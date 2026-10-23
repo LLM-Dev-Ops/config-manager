@@ -10,7 +10,7 @@ use std::future::Future;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
-use tracing::{debug, warn, error};
+use tracing::{debug, error, warn};
 
 /// Retry policy configuration
 #[derive(Debug, Clone)]
@@ -266,10 +266,7 @@ impl CircuitBreaker {
             CircuitState::Closed { failures } => {
                 let new_failures = failures + 1;
                 if new_failures >= self.failure_threshold {
-                    warn!(
-                        "Circuit opening after {} failures",
-                        new_failures
-                    );
+                    warn!("Circuit opening after {} failures", new_failures);
                     *state = CircuitState::Open {
                         opened_at: Instant::now(),
                     };
@@ -293,10 +290,7 @@ impl CircuitBreaker {
 
     /// Check if circuit is open
     pub fn is_open(&self) -> bool {
-        matches!(
-            *self.state.lock().unwrap(),
-            CircuitState::Open { .. }
-        )
+        matches!(*self.state.lock().unwrap(), CircuitState::Open { .. })
     }
 
     /// Get current state (for monitoring)
@@ -414,9 +408,7 @@ mod tests {
 
         // Fail 3 times to open circuit
         for _ in 0..3 {
-            let result = breaker
-                .call(|| async { Err::<(), _>("error") })
-                .await;
+            let result = breaker.call(|| async { Err::<(), _>("error") }).await;
             assert!(matches!(result, Err(CircuitBreakerError::Inner(_))));
         }
 
@@ -424,9 +416,7 @@ mod tests {
         assert!(breaker.is_open());
 
         // Next call should fail fast
-        let result = breaker
-            .call(|| async { Ok::<(), &str>(()) })
-            .await;
+        let result = breaker.call(|| async { Ok::<(), &str>(()) }).await;
         assert!(matches!(result, Err(CircuitBreakerError::Open)));
     }
 
@@ -445,9 +435,7 @@ mod tests {
         sleep(Duration::from_millis(20)).await;
 
         // Should transition to half-open and allow request
-        let result = breaker
-            .call(|| async { Ok::<(), &str>(()) })
-            .await;
+        let result = breaker.call(|| async { Ok::<(), &str>(()) }).await;
         assert!(result.is_ok());
     }
 
@@ -464,10 +452,7 @@ mod tests {
         sleep(Duration::from_millis(20)).await;
 
         for _ in 0..2 {
-            breaker
-                .call(|| async { Ok::<(), &str>(()) })
-                .await
-                .unwrap();
+            breaker.call(|| async { Ok::<(), &str>(()) }).await.unwrap();
         }
 
         // Circuit should be closed

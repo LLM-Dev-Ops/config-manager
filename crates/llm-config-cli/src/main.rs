@@ -2,8 +2,8 @@
 
 use clap::{Parser, Subcommand, ValueEnum};
 use colored::Colorize;
-use llm_config_core::{ConfigManager, ConfigValue, Environment};
 use llm_config_core::benchmarks;
+use llm_config_core::{ConfigManager, ConfigValue, Environment};
 use llm_config_crypto::{Algorithm, SecretKey};
 use std::path::PathBuf;
 
@@ -300,11 +300,22 @@ fn run(cli: Cli) -> anyhow::Result<()> {
 
             match format {
                 OutputFormat::Table => {
-                    println!("{}", format!("Configurations in {} ({})", namespace, env).green().bold());
+                    println!(
+                        "{}",
+                        format!("Configurations in {} ({})", namespace, env)
+                            .green()
+                            .bold()
+                    );
                     println!();
                     for entry in entries {
-                        println!("  {} {} = {}", "•".blue(), entry.key.bold(), format_value(&entry.value));
-                        println!("    Version: {} | Updated: {} by {}",
+                        println!(
+                            "  {} {} = {}",
+                            "•".blue(),
+                            entry.key.bold(),
+                            format_value(&entry.value)
+                        );
+                        println!(
+                            "    Version: {} | Updated: {} by {}",
                             entry.version,
                             entry.metadata.updated_at.format("%Y-%m-%d %H:%M:%S"),
                             entry.metadata.updated_by
@@ -330,7 +341,10 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             let env: Environment = env.into();
 
             if !yes {
-                print!("Delete configuration {}:{} in {} environment? [y/N] ", namespace, key, env);
+                print!(
+                    "Delete configuration {}:{} in {} environment? [y/N] ",
+                    namespace, key, env
+                );
                 use std::io::{self, Write};
                 io::stdout().flush()?;
 
@@ -365,13 +379,26 @@ fn run(cli: Cli) -> anyhow::Result<()> {
                 return Ok(());
             }
 
-            println!("{}", format!("Version history for {}:{}", namespace, key).green().bold());
+            println!(
+                "{}",
+                format!("Version history for {}:{}", namespace, key)
+                    .green()
+                    .bold()
+            );
             println!();
 
             for version in history {
-                println!("  {} Version {}", "→".blue(), version.version.to_string().bold());
+                println!(
+                    "  {} Version {}",
+                    "→".blue(),
+                    version.version.to_string().bold()
+                );
                 println!("    Value: {}", format_value(&version.value));
-                println!("    Created: {} by {}", version.created_at.format("%Y-%m-%d %H:%M:%S"), version.created_by);
+                println!(
+                    "    Created: {} by {}",
+                    version.created_at.format("%Y-%m-%d %H:%M:%S"),
+                    version.created_by
+                );
                 if let Some(desc) = version.change_description {
                     println!("    Note: {}", desc);
                 }
@@ -398,7 +425,12 @@ fn run(cli: Cli) -> anyhow::Result<()> {
 
         Commands::Export { path } => {
             let count = manager.export_all(&path)?;
-            println!("{}", format!("Exported {} configurations to {}", count, path.display()).green().bold());
+            println!(
+                "{}",
+                format!("Exported {} configurations to {}", count, path.display())
+                    .green()
+                    .bold()
+            );
         }
 
         Commands::Keygen => {
@@ -408,7 +440,11 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             println!("{}", key.to_base64());
             println!();
             println!("Set this key using:");
-            println!("  {} export LLM_CONFIG_KEY=\"{}\"", "•".blue(), key.to_base64());
+            println!(
+                "  {} export LLM_CONFIG_KEY=\"{}\"",
+                "•".blue(),
+                key.to_base64()
+            );
             println!("  {} llm-config --encryption-key <key> ...", "•".blue());
         }
 
@@ -426,7 +462,12 @@ fn run(cli: Cli) -> anyhow::Result<()> {
                 println!();
                 let bench_list = benchmarks::list_benchmarks();
                 for info in bench_list {
-                    println!("  {} [{}] {}", "•".blue(), info.category.yellow(), info.id.bold());
+                    println!(
+                        "  {} [{}] {}",
+                        "•".blue(),
+                        info.category.yellow(),
+                        info.id.bold()
+                    );
                     println!("    {}", info.description);
                 }
                 return Ok(());
@@ -434,7 +475,10 @@ fn run(cli: Cli) -> anyhow::Result<()> {
 
             let results = if let Some(target_id) = target {
                 // Run specific benchmark
-                println!("{}", format!("Running benchmark: {}", target_id).green().bold());
+                println!(
+                    "{}",
+                    format!("Running benchmark: {}", target_id).green().bold()
+                );
                 match benchmarks::run_benchmark(&target_id) {
                     Some(result) => vec![result],
                     None => {
@@ -444,7 +488,10 @@ fn run(cli: Cli) -> anyhow::Result<()> {
                 }
             } else if let Some(cat) = category {
                 // Run benchmarks by category
-                println!("{}", format!("Running {} benchmarks...", cat).green().bold());
+                println!(
+                    "{}",
+                    format!("Running {} benchmarks...", cat).green().bold()
+                );
                 benchmarks::run_benchmarks_by_category(&cat)
             } else if all {
                 // Run all benchmarks
@@ -467,23 +514,33 @@ fn run(cli: Cli) -> anyhow::Result<()> {
                     println!();
                     println!("{}", "Benchmark Results:".green().bold());
                     println!();
-                    println!("{:<25} {:>15} {:>15}", "Target".bold(), "Duration (ms)".bold(), "Ops/sec".bold());
+                    println!(
+                        "{:<25} {:>15} {:>15}",
+                        "Target".bold(),
+                        "Duration (ms)".bold(),
+                        "Ops/sec".bold()
+                    );
                     println!("{}", "-".repeat(60));
 
                     for result in &results {
-                        let duration_ms = result.metrics
+                        let duration_ms = result
+                            .metrics
                             .get("duration_ms")
                             .and_then(|v| v.as_f64())
                             .map(|v| format!("{:.3}", v))
                             .unwrap_or_else(|| "-".to_string());
 
-                        let ops_per_sec = result.metrics
+                        let ops_per_sec = result
+                            .metrics
                             .get("throughput_ops_per_sec")
                             .and_then(|v| v.as_f64())
                             .map(|v| format!("{:.2}", v))
                             .unwrap_or_else(|| "-".to_string());
 
-                        println!("{:<25} {:>15} {:>15}", result.target_id, duration_ms, ops_per_sec);
+                        println!(
+                            "{:<25} {:>15} {:>15}",
+                            result.target_id, duration_ms, ops_per_sec
+                        );
                     }
                     println!();
                 }
@@ -496,7 +553,11 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             if let Err(e) = benchmarks::io::write_benchmark_run(&output, &results) {
                 eprintln!("{} Failed to write results: {}", "Warning:".yellow(), e);
             } else {
-                println!("{} Results saved to {}", "✓".green(), output.join("benchmarks/output").display());
+                println!(
+                    "{} Results saved to {}",
+                    "✓".green(),
+                    output.join("benchmarks/output").display()
+                );
             }
 
             // Update summary
@@ -525,10 +586,8 @@ fn parse_value(s: &str) -> anyhow::Result<ConfigValue> {
             }
             serde_json::Value::Bool(b) => ConfigValue::Boolean(b),
             serde_json::Value::Array(arr) => {
-                let values: Result<Vec<_>, _> = arr
-                    .iter()
-                    .map(|v| parse_value(&v.to_string()))
-                    .collect();
+                let values: Result<Vec<_>, _> =
+                    arr.iter().map(|v| parse_value(&v.to_string())).collect();
                 ConfigValue::Array(values?)
             }
             serde_json::Value::Object(_) => {
@@ -549,7 +608,10 @@ fn format_value(value: &ConfigValue) -> String {
         ConfigValue::Integer(i) => i.to_string(),
         ConfigValue::Float(f) => f.to_string(),
         ConfigValue::Boolean(b) => b.to_string(),
-        ConfigValue::Array(arr) => format!("[{}]", arr.iter().map(format_value).collect::<Vec<_>>().join(", ")),
+        ConfigValue::Array(arr) => format!(
+            "[{}]",
+            arr.iter().map(format_value).collect::<Vec<_>>().join(", ")
+        ),
         ConfigValue::Object(_) => "<object>".to_string(),
         ConfigValue::Secret(_) => "<encrypted>".yellow().to_string(),
     }

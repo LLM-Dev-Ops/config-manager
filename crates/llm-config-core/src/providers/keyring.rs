@@ -22,8 +22,8 @@
 //! ```
 
 use super::traits::{
-    ConfigProvider, SecretProvider, ProviderError, ProviderResult,
-    ProviderValue, ProviderHealth, ValueMetadata,
+    ConfigProvider, ProviderError, ProviderHealth, ProviderResult, ProviderValue, SecretProvider,
+    ValueMetadata,
 };
 use std::collections::HashMap;
 
@@ -131,28 +131,20 @@ impl KeyringProvider {
                 // For now, we fall back to environment variables with a KEYRING_ prefix
                 // This allows testing without actual keyring access
                 let env_key = format!("KEYRING_{}", full_key.replace('/', "_").to_uppercase());
-                std::env::var(&env_key).map_err(|_| {
-                    ProviderError::NotFound {
-                        namespace: "keyring".to_string(),
-                        key: full_key.to_string(),
-                    }
+                std::env::var(&env_key).map_err(|_| ProviderError::NotFound {
+                    namespace: "keyring".to_string(),
+                    key: full_key.to_string(),
                 })
             }
-            KeyringStatus::ServiceUnavailable => {
-                Err(ProviderError::Unavailable(
-                    "Keyring service is not available".to_string()
-                ))
-            }
-            KeyringStatus::AccessDenied => {
-                Err(ProviderError::AuthenticationFailed(
-                    "Access to keyring was denied".to_string()
-                ))
-            }
-            KeyringStatus::Unsupported => {
-                Err(ProviderError::Unavailable(
-                    "Keyring is not supported on this platform".to_string()
-                ))
-            }
+            KeyringStatus::ServiceUnavailable => Err(ProviderError::Unavailable(
+                "Keyring service is not available".to_string(),
+            )),
+            KeyringStatus::AccessDenied => Err(ProviderError::AuthenticationFailed(
+                "Access to keyring was denied".to_string(),
+            )),
+            KeyringStatus::Unsupported => Err(ProviderError::Unavailable(
+                "Keyring is not supported on this platform".to_string(),
+            )),
         }
     }
 
@@ -165,21 +157,15 @@ impl KeyringProvider {
                 std::env::set_var(&env_key, value);
                 Ok(())
             }
-            KeyringStatus::ServiceUnavailable => {
-                Err(ProviderError::Unavailable(
-                    "Keyring service is not available".to_string()
-                ))
-            }
-            KeyringStatus::AccessDenied => {
-                Err(ProviderError::AuthenticationFailed(
-                    "Access to keyring was denied".to_string()
-                ))
-            }
-            KeyringStatus::Unsupported => {
-                Err(ProviderError::Unavailable(
-                    "Keyring is not supported on this platform".to_string()
-                ))
-            }
+            KeyringStatus::ServiceUnavailable => Err(ProviderError::Unavailable(
+                "Keyring service is not available".to_string(),
+            )),
+            KeyringStatus::AccessDenied => Err(ProviderError::AuthenticationFailed(
+                "Access to keyring was denied".to_string(),
+            )),
+            KeyringStatus::Unsupported => Err(ProviderError::Unavailable(
+                "Keyring is not supported on this platform".to_string(),
+            )),
         }
     }
 
@@ -192,11 +178,11 @@ impl KeyringProvider {
                 std::env::remove_var(&env_key);
                 Ok(())
             }
-            KeyringStatus::ServiceUnavailable | KeyringStatus::AccessDenied | KeyringStatus::Unsupported => {
-                Err(ProviderError::Unavailable(
-                    "Keyring is not available".to_string()
-                ))
-            }
+            KeyringStatus::ServiceUnavailable
+            | KeyringStatus::AccessDenied
+            | KeyringStatus::Unsupported => Err(ProviderError::Unavailable(
+                "Keyring is not available".to_string(),
+            )),
         }
     }
 }
@@ -219,7 +205,11 @@ impl ConfigProvider for KeyringProvider {
         Ok(ProviderValue::secret(value, "keyring"))
     }
 
-    async fn list(&self, namespace: &str, _prefix: Option<&str>) -> ProviderResult<HashMap<String, ProviderValue>> {
+    async fn list(
+        &self,
+        namespace: &str,
+        _prefix: Option<&str>,
+    ) -> ProviderResult<HashMap<String, ProviderValue>> {
         // Keyring APIs typically don't support listing
         // Return empty map - users should know their key names
         let _ = namespace;
@@ -229,15 +219,17 @@ impl ConfigProvider for KeyringProvider {
     fn health_check(&self) -> ProviderResult<ProviderHealth> {
         match &self.available {
             KeyringStatus::Available => Ok(ProviderHealth::healthy("keyring")),
-            KeyringStatus::ServiceUnavailable => {
-                Ok(ProviderHealth::unhealthy("keyring", "Service not available"))
-            }
+            KeyringStatus::ServiceUnavailable => Ok(ProviderHealth::unhealthy(
+                "keyring",
+                "Service not available",
+            )),
             KeyringStatus::AccessDenied => {
                 Ok(ProviderHealth::unhealthy("keyring", "Access denied"))
             }
-            KeyringStatus::Unsupported => {
-                Ok(ProviderHealth::unhealthy("keyring", "Not supported on this platform"))
-            }
+            KeyringStatus::Unsupported => Ok(ProviderHealth::unhealthy(
+                "keyring",
+                "Not supported on this platform",
+            )),
         }
     }
 }
@@ -292,7 +284,10 @@ mod tests {
         // Only run if keyring is available
         if provider.is_available().await {
             // Set a value using the stub
-            provider.set_secret("test", "secret", "my-secret-value").await.unwrap();
+            provider
+                .set_secret("test", "secret", "my-secret-value")
+                .await
+                .unwrap();
 
             // Get it back
             let value = provider.get("test", "secret").await.unwrap();

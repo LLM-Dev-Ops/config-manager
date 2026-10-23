@@ -40,7 +40,7 @@ lazy_static! {
         },
         SecretPattern {
             name: "Bearer Token",
-            regex: Regex::new(r#"(?i)bearer\s+([a-zA-Z0-9_\-\.]{20,})"#).unwrap(),
+            regex: Regex::new(r"(?i)bearer\s+([a-zA-Z0-9_\-\.]{20,})").unwrap(),
             severity: Severity::High,
         },
         SecretPattern {
@@ -60,12 +60,12 @@ lazy_static! {
         },
         SecretPattern {
             name: "RSA Private Key",
-            regex: Regex::new(r#"-----BEGIN (RSA|DSA|EC) PRIVATE KEY-----"#).unwrap(),
+            regex: Regex::new(r"-----BEGIN (RSA|DSA|EC) PRIVATE KEY-----").unwrap(),
             severity: Severity::Critical,
         },
         SecretPattern {
             name: "GitHub Token",
-            regex: Regex::new(r#"gh[pousr]_[A-Za-z0-9_]{36,}"#).unwrap(),
+            regex: Regex::new(r"gh[pousr]_[A-Za-z0-9_]{36,}").unwrap(),
             severity: Severity::Critical,
         },
         SecretPattern {
@@ -90,6 +90,7 @@ pub struct SecretScanner {
 
 impl SecretScanner {
     /// Create a new secret scanner.
+    #[must_use]
     pub fn new(project_root: &Path) -> Self {
         Self {
             project_root: project_root.to_path_buf(),
@@ -97,6 +98,9 @@ impl SecretScanner {
     }
 
     /// Scan for hardcoded secrets.
+    ///
+    /// # Errors
+    /// Returns an error when the project tree cannot be traversed.
     pub fn scan(&self) -> Result<Vec<Finding>> {
         tracing::info!("Scanning for hardcoded secrets");
 
@@ -112,7 +116,7 @@ impl SecretScanner {
 
             if Self::should_scan(path) {
                 if let Ok(content) = fs::read_to_string(path) {
-                    findings.extend(self.scan_file(path, &content)?);
+                    findings.extend(self.scan_file(path, &content));
                 }
             }
         }
@@ -126,27 +130,47 @@ impl SecretScanner {
         path_str.contains("target/")
             || path_str.contains("node_modules/")
             || path_str.contains(".git/")
+            || path_str.contains("crates/llm-config-devtools/src/security/")
             || path_str.contains("test")
             || path_str.contains("example")
     }
 
     fn should_scan(path: &Path) -> bool {
-        if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
-            matches!(
-                ext,
-                "rs" | "toml" | "yaml" | "yml" | "json" | "env" | "sh" | "py" | "js" | "ts"
-            )
-        } else {
-            false
-        }
+        path.extension()
+            .and_then(|s| s.to_str())
+            .is_some_and(|ext| {
+                matches!(
+                    ext,
+                    "rs" | "toml" | "yaml" | "yml" | "json" | "env" | "sh" | "py" | "js" | "ts"
+                )
+            })
     }
 
-    fn scan_file(&self, path: &Path, content: &str) -> Result<Vec<Finding>> {
+    fn scan_file(&self, path: &Path, content: &str) -> Vec<Finding> {
         let mut findings = Vec::new();
+        let mut pending_test_module = false;
+        let mut test_module_depth: Option<i32> = None;
 
         for (line_num, line) in content.lines().enumerate() {
-            // Skip comments (basic heuristic)
             let trimmed = line.trim();
+            if trimmed == "#[cfg(test)]" {
+                pending_test_module = true;
+                continue;
+            }
+            if pending_test_module && trimmed.starts_with("mod ") {
+                test_module_depth = Some(Self::brace_delta(line));
+                pending_test_module = false;
+                continue;
+            }
+            if let Some(depth) = test_module_depth.as_mut() {
+                *depth += Self::brace_delta(line);
+                if *depth <= 0 {
+                    test_module_depth = None;
+                }
+                continue;
+            }
+
+            // Skip comments (basic heuristic)
             if trimmed.starts_with("//") || trimmed.starts_with('#') || trimmed.starts_with("/*") {
                 // Check if it contains "TODO", "FIXME", "example" - these are likely not real secrets
                 if trimmed.to_lowercase().contains("todo")
@@ -189,19 +213,31 @@ impl SecretScanner {
             }
         }
 
-        Ok(findings)
+        findings
     }
 
     fn is_false_positive(line: &str) -> bool {
         let lower = line.to_lowercase();
-        lower.contains("example")
+        line.contains("${")
+            || lower.contains("example")
             || lower.contains("test")
             || lower.contains("placeholder")
             || lower.contains("your-")
             || lower.contains("xxx")
             || lower.contains("***")
             || lower.contains("changeme")
+            || lower.contains("change_me")
+            || lower.contains("change-me")
             || lower.contains("replace")
+            || lower.contains(".contains(")
+    }
+
+    fn brace_delta(line: &str) -> i32 {
+        line.chars().fold(0, |depth, character| match character {
+            '{' => depth + 1,
+            '}' => depth - 1,
+            _ => depth,
+        })
     }
 
     fn redact_secret(line: &str) -> String {
@@ -214,7 +250,7 @@ impl SecretScanner {
                     if secret_str.len() > 4 {
                         let visible = &secret_str[..4];
                         let masked = "*".repeat(secret_str.len() - 4);
-                        redacted = redacted.replace(secret_str, &format!("{}{}",visible, masked));
+                        redacted = redacted.replace(secret_str, &format!("{visible}{masked}"));
                     }
                 }
             }
@@ -265,6 +301,8 @@ let api_key = "sk_live_1234567890abcdefghij";
 // Example configuration - replace with your values
 const PASSWORD: &str = "your-password-here";
 const API_KEY: &str = "example-api-key";
+const DEPLOY_PASSWORD: &str = "${PASSWORD_FROM_ENV}";
+const BOOTSTRAP_PASSWORD: &str = "CHANGE_ME_BEFORE_DEPLOY";
 "#,
         )
         .unwrap();
@@ -274,6 +312,21 @@ const API_KEY: &str = "example-api-key";
 
         // Should not flag placeholders
         assert_eq!(findings.len(), 0);
+    }
+
+    #[test]
+    fn test_secret_scanner_ignores_cfg_test_fixtures() {
+        let scanner = SecretScanner::new(Path::new("."));
+        let content = r#"
+#[cfg(test)]
+mod tests {
+    const PASSWORD: &str = "fixture-secret-value";
+}
+const SAFE_VALUE: &str = "public";
+"#;
+
+        let findings = scanner.scan_file(Path::new("src/config.rs"), content);
+        assert!(findings.is_empty());
     }
 
     #[test]

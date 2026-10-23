@@ -6,6 +6,7 @@ use crate::routes::{
     list_configs, rollback_config, set_config, ApiState,
 };
 use axum::{
+    http::StatusCode,
     middleware,
     routing::{delete, get, post},
     Router,
@@ -62,6 +63,9 @@ pub fn create_router(manager: Arc<ConfigManager>, security_state: SecurityState)
             "/execution/configs/:namespace/:key",
             post(execute_set_config),
         )
+        // Unknown API paths must undergo validation too (e.g. traversal paths
+        // cannot avoid checks by failing to match a route).
+        .fallback(|| async { StatusCode::NOT_FOUND })
         .layer(middleware::from_fn_with_state(
             security_state.clone(),
             comprehensive_security_middleware,
@@ -75,16 +79,9 @@ pub fn create_router(manager: Arc<ConfigManager>, security_state: SecurityState)
 }
 
 /// Start the HTTP server
-pub async fn serve(
-    manager: Arc<ConfigManager>,
-    config: ServerConfig,
-) -> anyhow::Result<()> {
+pub async fn serve(manager: Arc<ConfigManager>, config: ServerConfig) -> anyhow::Result<()> {
     // Create security state
-    let security_state = if config.enable_security {
-        SecurityState::new()
-    } else {
-        SecurityState::new() // Always create but can be configured differently
-    };
+    let security_state = SecurityState::new();
 
     let app = create_router(manager, security_state);
 

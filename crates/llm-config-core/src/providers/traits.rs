@@ -13,10 +13,7 @@ use thiserror::Error;
 pub enum ProviderError {
     /// The requested key was not found in this provider
     #[error("Key not found: {namespace}/{key}")]
-    NotFound {
-        namespace: String,
-        key: String,
-    },
+    NotFound { namespace: String, key: String },
 
     /// The provider is not available or not configured
     #[error("Provider not available: {0}")]
@@ -171,7 +168,11 @@ pub trait ConfigProvider: Send + Sync + fmt::Debug {
     /// # Returns
     ///
     /// A map of key names to values. Default implementation returns empty map.
-    async fn list(&self, namespace: &str, prefix: Option<&str>) -> ProviderResult<HashMap<String, ProviderValue>> {
+    async fn list(
+        &self,
+        namespace: &str,
+        prefix: Option<&str>,
+    ) -> ProviderResult<HashMap<String, ProviderValue>> {
         let _ = (namespace, prefix);
         Ok(HashMap::new())
     }

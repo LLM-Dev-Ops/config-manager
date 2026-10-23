@@ -1,16 +1,13 @@
 //! Key derivation using Argon2id
 
+use crate::{Algorithm, CryptoError, Result, SecretKey, KEY_SIZE};
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2, Params,
 };
-use crate::{CryptoError, Result, SecretKey, Algorithm, KEY_SIZE};
 
 /// Derive a key from a password using Argon2id
-pub fn derive_key_from_password(
-    password: &str,
-    salt: Option<&str>,
-) -> Result<(SecretKey, String)> {
+pub fn derive_key_from_password(password: &str, salt: Option<&str>) -> Result<(SecretKey, String)> {
     let salt_string = match salt {
         Some(s) => SaltString::from_b64(s)
             .map_err(|e| CryptoError::KeyGenerationFailed(format!("Invalid salt: {}", e)))?,
@@ -21,20 +18,16 @@ pub fn derive_key_from_password(
     let params = Params::new(65536, 3, 4, Some(KEY_SIZE))
         .map_err(|e| CryptoError::KeyGenerationFailed(format!("Invalid Argon2 params: {}", e)))?;
 
-    let argon2 = Argon2::new(
-        argon2::Algorithm::Argon2id,
-        argon2::Version::V0x13,
-        params,
-    );
+    let argon2 = Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, params);
 
     let password_hash = argon2
         .hash_password(password.as_bytes(), &salt_string)
         .map_err(|e| CryptoError::KeyGenerationFailed(format!("Hash failed: {}", e)))?;
 
     // Extract the raw key bytes
-    let hash_bytes = password_hash.hash.ok_or_else(|| {
-        CryptoError::KeyGenerationFailed("No hash output".to_string())
-    })?;
+    let hash_bytes = password_hash
+        .hash
+        .ok_or_else(|| CryptoError::KeyGenerationFailed("No hash output".to_string()))?;
 
     let key = SecretKey::from_bytes(Algorithm::Aes256Gcm, hash_bytes.as_bytes().to_vec())?;
 

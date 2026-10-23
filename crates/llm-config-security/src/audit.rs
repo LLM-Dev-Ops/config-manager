@@ -32,24 +32,23 @@ pub struct AuditValidator {
     config: AuditConfig,
 }
 
+impl Default for AuditValidator {
+    fn default() -> Self {
+        Self::new(AuditConfig::default())
+    }
+}
+
 impl AuditValidator {
     /// Create a new audit validator
     pub fn new(config: AuditConfig) -> Self {
         Self { config }
     }
 
-    /// Create with default configuration
-    pub fn default() -> Self {
-        Self::new(AuditConfig::default())
-    }
-
     /// Validate audit event
     pub fn validate_event(&self, event: &AuditEvent) -> SecurityResult<()> {
         // Validate required fields
         if event.timestamp.is_none() {
-            return Err(SecurityError::AuditError(
-                "Missing timestamp".to_string(),
-            ));
+            return Err(SecurityError::AuditError("Missing timestamp".to_string()));
         }
 
         if event.user_id.is_empty() {
@@ -61,9 +60,7 @@ impl AuditValidator {
         }
 
         if event.resource.is_empty() {
-            return Err(SecurityError::AuditError(
-                "Missing resource".to_string(),
-            ));
+            return Err(SecurityError::AuditError("Missing resource".to_string()));
         }
 
         // Validate timestamp is not in the future
@@ -87,12 +84,13 @@ impl AuditValidator {
     /// Check for suspicious patterns
     pub fn check_suspicious_patterns(&self, event: &AuditEvent) -> SecurityResult<()> {
         // Check for potential privilege escalation
-        if event.action.contains("permission") && event.action.contains("grant") {
-            if event.metadata.get("new_role") == Some(&"admin".to_string()) {
-                return Err(SecurityError::SuspiciousActivity(
-                    "Potential privilege escalation detected".to_string(),
-                ));
-            }
+        if event.action.contains("permission")
+            && event.action.contains("grant")
+            && event.metadata.get("new_role").map(String::as_str) == Some("admin")
+        {
+            return Err(SecurityError::SuspiciousActivity(
+                "Potential privilege escalation detected".to_string(),
+            ));
         }
 
         // Check for mass deletion
@@ -177,8 +175,10 @@ impl AuditValidator {
             return AuditStats::default();
         }
 
-        let mut stats = AuditStats::default();
-        stats.total_events = events.len();
+        let mut stats = AuditStats {
+            total_events: events.len(),
+            ..AuditStats::default()
+        };
 
         // Count by severity
         for event in events {
@@ -206,9 +206,13 @@ impl AuditValidator {
         // Check against expected rate
         if let Some(expected_rate) = self.config.expected_event_rate {
             if stats.events_per_second < expected_rate * 0.5 {
-                stats.anomalies.push("Event rate significantly below expected".to_string());
+                stats
+                    .anomalies
+                    .push("Event rate significantly below expected".to_string());
             } else if stats.events_per_second > expected_rate * 2.0 {
-                stats.anomalies.push("Event rate significantly above expected".to_string());
+                stats
+                    .anomalies
+                    .push("Event rate significantly above expected".to_string());
             }
         }
 
@@ -290,12 +294,16 @@ mod tests {
 
         // Privilege escalation
         let mut event = create_test_event("user123", "permission_grant");
-        event.metadata.insert("new_role".to_string(), "admin".to_string());
+        event
+            .metadata
+            .insert("new_role".to_string(), "admin".to_string());
         assert!(validator.check_suspicious_patterns(&event).is_err());
 
         // Mass deletion
         let mut event = create_test_event("user123", "delete");
-        event.metadata.insert("count".to_string(), "5000".to_string());
+        event
+            .metadata
+            .insert("count".to_string(), "5000".to_string());
         assert!(validator.check_suspicious_patterns(&event).is_err());
 
         // Suspicious IP

@@ -4,9 +4,10 @@
 
 use axum::{
     body::Body,
+    extract::ConnectInfo,
     http::{Request, StatusCode},
 };
-use llm_config_api::{create_router, SecurityState, ServerConfig};
+use llm_config_api::{create_router, SecurityState};
 use llm_config_core::ConfigManager;
 use llm_config_security::{
     InputValidator, PolicyEnforcer, RateLimitConfig, RateLimiter, SecurityPolicy,
@@ -15,6 +16,13 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tempfile::TempDir;
 use tower::ServiceExt;
+
+/// Supply the transport context that the real server inserts for every connection.
+fn request() -> axum::http::request::Builder {
+    Request::builder().extension(ConnectInfo(
+        "127.0.0.1:12345".parse::<SocketAddr>().unwrap(),
+    ))
+}
 
 /// Create a test config manager
 fn create_test_manager() -> (ConfigManager, TempDir) {
@@ -36,8 +44,10 @@ fn create_test_security_state() -> SecurityState {
 
     let input_validator = InputValidator::default();
 
-    let mut policy = SecurityPolicy::default();
-    policy.require_tls = false; // Disable TLS requirement for tests
+    let policy = SecurityPolicy {
+        require_tls: false, // Disable TLS requirement for tests
+        ..SecurityPolicy::default()
+    };
     let policy_enforcer = PolicyEnforcer::new(policy);
 
     SecurityState::with_components(rate_limiter, input_validator, policy_enforcer)
@@ -52,8 +62,8 @@ async fn test_sql_injection_blocked() {
     // Attempt SQL injection in path
     let response = app
         .oneshot(
-            Request::builder()
-                .uri("/api/v1/configs/test/key' OR '1'='1")
+            request()
+                .uri("/api/v1/configs/test/key'%20OR%20'1'='1")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -72,8 +82,8 @@ async fn test_xss_attempt_blocked() {
     // Attempt XSS in path
     let response = app
         .oneshot(
-            Request::builder()
-                .uri("/api/v1/configs/test/<script>alert('xss')</script>")
+            request()
+                .uri("/api/v1/configs/test/%3Cscript%3Ealert%28%27xss%27%29%3C%2Fscript%3E")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -92,7 +102,7 @@ async fn test_path_traversal_blocked() {
     // Attempt path traversal
     let response = app
         .oneshot(
-            Request::builder()
+            request()
                 .uri("/api/v1/configs/../../etc/passwd")
                 .body(Body::empty())
                 .unwrap(),
@@ -112,7 +122,7 @@ async fn test_command_injection_blocked() {
     // Attempt command injection
     let response = app
         .oneshot(
-            Request::builder()
+            request()
                 .uri("/api/v1/configs/test/key;ls")
                 .body(Body::empty())
                 .unwrap(),
@@ -148,12 +158,7 @@ async fn test_rate_limiting_enforcement() {
     // First request should succeed
     let response1 = app
         .clone()
-        .oneshot(
-            Request::builder()
-                .uri("/health")
-                .body(Body::empty())
-                .unwrap(),
-        )
+        .oneshot(request().uri("/health").body(Body::empty()).unwrap())
         .await
         .unwrap();
     assert_eq!(response1.status(), StatusCode::OK);
@@ -161,12 +166,7 @@ async fn test_rate_limiting_enforcement() {
     // Second request should succeed
     let response2 = app
         .clone()
-        .oneshot(
-            Request::builder()
-                .uri("/health")
-                .body(Body::empty())
-                .unwrap(),
-        )
+        .oneshot(request().uri("/health").body(Body::empty()).unwrap())
         .await
         .unwrap();
     assert_eq!(response2.status(), StatusCode::OK);
@@ -184,7 +184,7 @@ async fn test_valid_request_passes_security() {
     // Valid request should pass all security checks
     let response = app
         .oneshot(
-            Request::builder()
+            request()
                 .method("GET")
                 .uri("/api/v1/configs/test-namespace/test-key?env=development")
                 .header("content-type", "application/json")
@@ -207,12 +207,7 @@ async fn test_health_endpoint_no_security() {
 
     // Health check should not be protected by security middleware
     let response = app
-        .oneshot(
-            Request::builder()
-                .uri("/health")
-                .body(Body::empty())
-                .unwrap(),
-        )
+        .oneshot(request().uri("/health").body(Body::empty()).unwrap())
         .await
         .unwrap();
 
@@ -228,7 +223,7 @@ async fn test_large_request_blocked() {
     // Request with large content-length header
     let response = app
         .oneshot(
-            Request::builder()
+            request()
                 .method("POST")
                 .uri("/api/v1/configs/test/key")
                 .header("content-type", "application/json")
@@ -247,9 +242,11 @@ async fn test_blocked_ip_rejected() {
     let (manager, _temp_dir) = create_test_manager();
 
     // Create policy with blocked IP
-    let mut policy = SecurityPolicy::default();
-    policy.blocked_ips = vec!["127.0.0.1".to_string()];
-    policy.require_tls = false;
+    let policy = SecurityPolicy {
+        blocked_ips: vec!["127.0.0.1".to_string()],
+        require_tls: false,
+        ..SecurityPolicy::default()
+    };
 
     let security_state = SecurityState::with_components(
         RateLimiter::new(RateLimitConfig::default()),
@@ -262,7 +259,7 @@ async fn test_blocked_ip_rejected() {
     // Request from blocked IP
     let response = app
         .oneshot(
-            Request::builder()
+            request()
                 .uri("/api/v1/configs/test/key")
                 .body(Body::empty())
                 .unwrap(),
@@ -278,9 +275,11 @@ async fn test_blocked_endpoint_rejected() {
     let (manager, _temp_dir) = create_test_manager();
 
     // Create policy with blocked endpoints
-    let mut policy = SecurityPolicy::default();
-    policy.blocked_endpoints = vec!["/api/v1/configs/admin/*".to_string()];
-    policy.require_tls = false;
+    let policy = SecurityPolicy {
+        blocked_endpoints: vec!["/api/v1/configs/admin/*".to_string()],
+        require_tls: false,
+        ..SecurityPolicy::default()
+    };
 
     let security_state = SecurityState::with_components(
         RateLimiter::new(RateLimitConfig::default()),
@@ -293,7 +292,7 @@ async fn test_blocked_endpoint_rejected() {
     // Request to blocked endpoint
     let response = app
         .oneshot(
-            Request::builder()
+            request()
                 .uri("/api/v1/configs/admin/secret")
                 .body(Body::empty())
                 .unwrap(),
@@ -313,7 +312,7 @@ async fn test_security_headers_validation() {
     // Request with security-relevant headers
     let response = app
         .oneshot(
-            Request::builder()
+            request()
                 .uri("/api/v1/configs/test/key")
                 .header("x-user-id", "test-user")
                 .header("x-forwarded-proto", "http") // Not HTTPS
@@ -337,8 +336,8 @@ async fn test_malformed_query_parameters_blocked() {
     // Query parameters with SQL injection attempt
     let response = app
         .oneshot(
-            Request::builder()
-                .uri("/api/v1/configs/test/key?env=dev' OR '1'='1")
+            request()
+                .uri("/api/v1/configs/test/key?env=dev'%20OR%20'1'='1")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -359,8 +358,8 @@ async fn test_multiple_security_violations() {
     // - SQL injection in query
     let response = app
         .oneshot(
-            Request::builder()
-                .uri("/api/v1/configs/<script>/key?env=' OR '1'='1")
+            request()
+                .uri("/api/v1/configs/%3Cscript%3E/key?env='%20OR%20'1'='1")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -376,9 +375,11 @@ async fn test_cors_origin_validation() {
     let (manager, _temp_dir) = create_test_manager();
 
     // Create policy with allowed origins
-    let mut policy = SecurityPolicy::default();
-    policy.allowed_origins = vec!["https://example.com".to_string()];
-    policy.require_tls = false;
+    let policy = SecurityPolicy {
+        allowed_origins: vec!["https://example.com".to_string()],
+        require_tls: false,
+        ..SecurityPolicy::default()
+    };
 
     let security_state = SecurityState::with_components(
         RateLimiter::new(RateLimitConfig::default()),
@@ -392,7 +393,7 @@ async fn test_cors_origin_validation() {
     let response = app
         .clone()
         .oneshot(
-            Request::builder()
+            request()
                 .uri("/api/v1/configs/test/key")
                 .header("origin", "https://example.com")
                 .body(Body::empty())
@@ -407,7 +408,7 @@ async fn test_cors_origin_validation() {
     // Request from disallowed origin
     let response2 = app
         .oneshot(
-            Request::builder()
+            request()
                 .uri("/api/v1/configs/test/key")
                 .header("origin", "https://evil.com")
                 .body(Body::empty())
@@ -429,7 +430,7 @@ async fn test_security_context_creation() {
     // Request with user identification
     let response = app
         .oneshot(
-            Request::builder()
+            request()
                 .uri("/api/v1/configs/test/key")
                 .header("x-user-id", "test-user-123")
                 .body(Body::empty())

@@ -142,7 +142,7 @@ pub trait HealthCheck: Send + Sync {
 
 /// Health checker that manages multiple health checks
 pub struct HealthChecker {
-    checks: Arc<RwLock<HashMap<String, Box<dyn HealthCheck>>>>,
+    checks: Arc<RwLock<HashMap<String, Arc<dyn HealthCheck>>>>,
     start_time: Instant,
 }
 
@@ -158,17 +158,23 @@ impl HealthChecker {
     /// Register a health check
     pub fn register(&self, check: Box<dyn HealthCheck>) {
         let name = check.name().to_string();
-        self.checks.write().unwrap().insert(name, check);
+        self.checks.write().unwrap().insert(name, Arc::from(check));
     }
 
     /// Perform all health checks
     pub async fn check_health(&self) -> HealthReport {
-        let checks_map = self.checks.read().unwrap();
+        let checks: Vec<_> = {
+            let checks_map = self.checks.read().unwrap();
+            checks_map
+                .iter()
+                .map(|(name, check)| (name.clone(), Arc::clone(check)))
+                .collect()
+        };
         let mut results = HashMap::new();
 
-        for (name, check) in checks_map.iter() {
+        for (name, check) in checks {
             let result = check.check().await;
-            results.insert(name.clone(), result);
+            results.insert(name, result);
         }
 
         HealthReport::new(results, self.start_time.elapsed())
@@ -299,8 +305,8 @@ impl HealthCheck for DiskSpaceHealthCheck {
             HealthCheckResult::unhealthy(
                 &self.name,
                 format!(
-                    "Disk usage at {:.1}% (critical threshold: {:.1}%)",
-                    usage_percent, self.critical_threshold_percent
+                    "Disk {} usage at {:.1}% (critical threshold: {:.1}%)",
+                    self.path, usage_percent, self.critical_threshold_percent
                 ),
             )
             .with_duration(start.elapsed())
@@ -308,8 +314,8 @@ impl HealthCheck for DiskSpaceHealthCheck {
             HealthCheckResult::degraded(
                 &self.name,
                 format!(
-                    "Disk usage at {:.1}% (warning threshold: {:.1}%)",
-                    usage_percent, self.warning_threshold_percent
+                    "Disk {} usage at {:.1}% (warning threshold: {:.1}%)",
+                    self.path, usage_percent, self.warning_threshold_percent
                 ),
             )
             .with_duration(start.elapsed())
@@ -373,14 +379,8 @@ mod tests {
     #[test]
     fn test_health_report() {
         let mut checks = HashMap::new();
-        checks.insert(
-            "test1".to_string(),
-            HealthCheckResult::healthy("test1"),
-        );
-        checks.insert(
-            "test2".to_string(),
-            HealthCheckResult::healthy("test2"),
-        );
+        checks.insert("test1".to_string(), HealthCheckResult::healthy("test1"));
+        checks.insert("test2".to_string(), HealthCheckResult::healthy("test2"));
 
         let report = HealthReport::new(checks, Duration::from_secs(100));
         assert!(report.is_healthy());
@@ -390,10 +390,7 @@ mod tests {
     #[test]
     fn test_health_report_degraded() {
         let mut checks = HashMap::new();
-        checks.insert(
-            "test1".to_string(),
-            HealthCheckResult::healthy("test1"),
-        );
+        checks.insert("test1".to_string(), HealthCheckResult::healthy("test1"));
         checks.insert(
             "test2".to_string(),
             HealthCheckResult::degraded("test2", "warning"),
@@ -407,10 +404,7 @@ mod tests {
     #[test]
     fn test_health_report_unhealthy() {
         let mut checks = HashMap::new();
-        checks.insert(
-            "test1".to_string(),
-            HealthCheckResult::healthy("test1"),
-        );
+        checks.insert("test1".to_string(), HealthCheckResult::healthy("test1"));
         checks.insert(
             "test2".to_string(),
             HealthCheckResult::unhealthy("test2", "error"),

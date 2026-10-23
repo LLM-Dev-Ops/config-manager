@@ -8,23 +8,27 @@ fn bench_role_assignment(c: &mut Criterion) {
 
     for num_users in [10, 100, 1000].iter() {
         group.throughput(Throughput::Elements(*num_users as u64));
-        group.bench_with_input(BenchmarkId::from_parameter(num_users), num_users, |b, &num_users| {
-            b.iter_batched(
-                || PolicyEnforcer::new(),
-                |mut enforcer| {
-                    for i in 0..num_users {
-                        let role = match i % 4 {
-                            0 => Role::Admin,
-                            1 => Role::Editor,
-                            2 => Role::Viewer,
-                            _ => Role::Auditor,
-                        };
-                        enforcer.assign_role(RoleAssignment::new(&format!("user{}", i), role));
-                    }
-                },
-                criterion::BatchSize::SmallInput,
-            );
-        });
+        group.bench_with_input(
+            BenchmarkId::from_parameter(num_users),
+            num_users,
+            |b, &num_users| {
+                b.iter_batched(
+                    PolicyEnforcer::new,
+                    |mut enforcer| {
+                        for i in 0..num_users {
+                            let role = match i % 4 {
+                                0 => Role::Admin,
+                                1 => Role::Editor,
+                                2 => Role::Viewer,
+                                _ => Role::Auditor,
+                            };
+                            enforcer.assign_role(RoleAssignment::new(format!("user{}", i), role));
+                        }
+                    },
+                    criterion::BatchSize::SmallInput,
+                );
+            },
+        );
     }
     group.finish();
 }
@@ -123,7 +127,7 @@ fn bench_mixed_permission_checks(c: &mut Criterion) {
             2 => Role::Viewer,
             _ => Role::Auditor,
         };
-        enforcer.assign_role(RoleAssignment::new(&format!("user{}", i), role));
+        enforcer.assign_role(RoleAssignment::new(format!("user{}", i), role));
     }
 
     c.bench_function("mixed_permission_checks", |b| {
@@ -152,23 +156,30 @@ fn bench_role_revocation(c: &mut Criterion) {
 
     for num_users in [10, 100, 1000].iter() {
         group.throughput(Throughput::Elements(*num_users as u64));
-        group.bench_with_input(BenchmarkId::from_parameter(num_users), num_users, |b, &num_users| {
-            b.iter_batched(
-                || {
-                    let mut enforcer = PolicyEnforcer::new();
-                    for i in 0..num_users {
-                        enforcer.assign_role(RoleAssignment::new(&format!("user{}", i), Role::Editor));
-                    }
-                    enforcer
-                },
-                |mut enforcer| {
-                    for i in 0..num_users {
-                        let _ = enforcer.revoke_role(&format!("user{}", i), 0);
-                    }
-                },
-                criterion::BatchSize::SmallInput,
-            );
-        });
+        group.bench_with_input(
+            BenchmarkId::from_parameter(num_users),
+            num_users,
+            |b, &num_users| {
+                b.iter_batched(
+                    || {
+                        let mut enforcer = PolicyEnforcer::new();
+                        for i in 0..num_users {
+                            enforcer.assign_role(RoleAssignment::new(
+                                format!("user{}", i),
+                                Role::Editor,
+                            ));
+                        }
+                        enforcer
+                    },
+                    |mut enforcer| {
+                        for i in 0..num_users {
+                            let _ = enforcer.revoke_role(&format!("user{}", i), 0);
+                        }
+                    },
+                    criterion::BatchSize::SmallInput,
+                );
+            },
+        );
     }
     group.finish();
 }
@@ -184,15 +195,11 @@ fn bench_get_user_roles(c: &mut Criterion) {
     let mut group = c.benchmark_group("get_user_roles");
 
     group.bench_function("admin_roles", |b| {
-        b.iter(|| {
-            enforcer.get_user_roles(black_box("admin"))
-        });
+        b.iter(|| enforcer.get_user_roles(black_box("admin")));
     });
 
     group.bench_function("viewer_roles", |b| {
-        b.iter(|| {
-            enforcer.get_user_roles(black_box("viewer"))
-        });
+        b.iter(|| enforcer.get_user_roles(black_box("viewer")));
     });
 
     group.finish();

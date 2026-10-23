@@ -146,9 +146,9 @@ impl RoleAssignment {
     /// Check if this assignment applies to the given scope
     pub fn applies_to_scope(&self, scope: Option<&str>) -> bool {
         match (&self.scope, scope) {
-            (None, _) => true,              // Global scope applies to everything
+            (None, _) => true,                // Global scope applies to everything
             (Some(s1), Some(s2)) => s1 == s2, // Exact scope match
-            (Some(_), None) => false,       // Scoped assignment doesn't apply globally
+            (Some(_), None) => false,         // Scoped assignment doesn't apply globally
         }
     }
 }

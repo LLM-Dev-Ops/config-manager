@@ -94,7 +94,8 @@ impl L2Cache {
 
     /// Put an entry into the cache
     pub fn put(&self, entry: &ConfigEntry) -> Result<()> {
-        let cache_key = Self::cache_key(&entry.namespace, &entry.key, &entry.environment.to_string());
+        let cache_key =
+            Self::cache_key(&entry.namespace, &entry.key, &entry.environment.to_string());
         let path = self.cache_file_path(&cache_key);
 
         // Write to temp file first for atomicity

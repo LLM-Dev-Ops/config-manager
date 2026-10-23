@@ -51,8 +51,7 @@ impl<S: Send + Sync> FromRequestParts<S> for ExecutionContextExtractor {
             .and_then(|v| v.to_str().ok())
             .and_then(|v| Uuid::parse_str(v).ok())
             .ok_or_else(|| ExecutionContextRejection {
-                message: "X-Parent-Span-Id header is required and must be a valid UUID"
-                    .to_string(),
+                message: "X-Parent-Span-Id header is required and must be a valid UUID".to_string(),
             })?;
 
         let execution_id = headers

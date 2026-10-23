@@ -18,6 +18,10 @@ pub mod unsafe_code;
 
 /// Security scan configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "independent scanner toggles intentionally mirror the CLI flags"
+)]
 pub struct ScanConfig {
     /// Project root directory.
     pub project_root: PathBuf,
@@ -68,10 +72,10 @@ pub enum Severity {
 impl std::fmt::Display for Severity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Severity::Low => write!(f, "LOW"),
-            Severity::Medium => write!(f, "MEDIUM"),
-            Severity::High => write!(f, "HIGH"),
-            Severity::Critical => write!(f, "CRITICAL"),
+            Self::Low => write!(f, "LOW"),
+            Self::Medium => write!(f, "MEDIUM"),
+            Self::High => write!(f, "HIGH"),
+            Self::Critical => write!(f, "CRITICAL"),
         }
     }
 }
@@ -82,7 +86,7 @@ pub struct Finding {
     /// Finding severity.
     pub severity: Severity,
 
-    /// Finding category (e.g., "unsafe_code", "secret", "sql_injection").
+    /// Finding category (e.g., "`unsafe_code`", "secret", "`sql_injection`").
     pub category: String,
 
     /// Brief description of the finding.
@@ -156,6 +160,7 @@ pub struct ScanSummary {
 
 impl SecurityReport {
     /// Create a new security report.
+    #[must_use]
     pub fn new(project_root: PathBuf, findings: Vec<Finding>) -> Self {
         let summary = Self::calculate_summary(&findings);
 
@@ -217,7 +222,8 @@ impl SecurityReport {
     }
 
     /// Check if there are any critical or high severity findings.
-    pub fn has_high_severity(&self) -> bool {
+    #[must_use]
+    pub const fn has_high_severity(&self) -> bool {
         self.summary.critical > 0 || self.summary.high > 0
     }
 }
@@ -229,11 +235,15 @@ pub struct SecurityScanner {
 
 impl SecurityScanner {
     /// Create a new security scanner with the given configuration.
-    pub fn new(config: ScanConfig) -> Self {
+    #[must_use]
+    pub const fn new(config: ScanConfig) -> Self {
         Self { config }
     }
 
     /// Run the security scan.
+    ///
+    /// # Errors
+    /// Returns an error when an enabled scanner fails to execute.
     pub fn scan(&self) -> Result<SecurityReport> {
         use rayon::prelude::*;
 
@@ -247,9 +257,7 @@ impl SecurityScanner {
 
         if self.config.scan_clippy {
             let root = self.config.project_root.clone();
-            scanners.push(Box::new(move || {
-                clippy::ClippyScanner::new(&root).scan()
-            }));
+            scanners.push(Box::new(move || clippy::ClippyScanner::new(&root).scan()));
         }
 
         if self.config.scan_unsafe {
@@ -261,9 +269,7 @@ impl SecurityScanner {
 
         if self.config.scan_secrets {
             let root = self.config.project_root.clone();
-            scanners.push(Box::new(move || {
-                secret::SecretScanner::new(&root).scan()
-            }));
+            scanners.push(Box::new(move || secret::SecretScanner::new(&root).scan()));
         }
 
         if self.config.scan_sql {
@@ -274,10 +280,8 @@ impl SecurityScanner {
         }
 
         // Run scans in parallel using rayon
-        let scan_results: Vec<Result<Vec<Finding>>> = scanners
-            .par_iter()
-            .map(|scanner| scanner())
-            .collect();
+        let scan_results: Vec<Result<Vec<Finding>>> =
+            scanners.par_iter().map(|scanner| scanner()).collect();
 
         // Collect all findings
         for result in scan_results {

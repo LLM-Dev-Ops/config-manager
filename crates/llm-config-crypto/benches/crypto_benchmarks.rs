@@ -1,13 +1,11 @@
 //! Performance benchmarks for cryptographic operations
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use llm_config_crypto::{encrypt, decrypt, Algorithm, SecretKey};
+use llm_config_crypto::{decrypt, encrypt, Algorithm, SecretKey};
 
 fn bench_key_generation(c: &mut Criterion) {
     c.bench_function("key_generation_aes256gcm", |b| {
-        b.iter(|| {
-            SecretKey::generate(black_box(Algorithm::Aes256Gcm)).unwrap()
-        });
+        b.iter(|| SecretKey::generate(black_box(Algorithm::Aes256Gcm)).unwrap());
     });
 }
 
@@ -21,15 +19,9 @@ fn bench_encryption(c: &mut Criterion) {
         let data = vec![0u8; *size];
         group.throughput(Throughput::Bytes(*size as u64));
 
-        group.bench_with_input(
-            BenchmarkId::new("aes256gcm", size),
-            size,
-            |b, _size| {
-                b.iter(|| {
-                    encrypt(&key, black_box(&data), None).unwrap()
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("aes256gcm", size), size, |b, _size| {
+            b.iter(|| encrypt(&key, black_box(&data), None).unwrap());
+        });
     }
 
     group.finish();
@@ -47,15 +39,9 @@ fn bench_decryption(c: &mut Criterion) {
 
         let encrypted = encrypt(&key, &data, None).unwrap();
 
-        group.bench_with_input(
-            BenchmarkId::new("aes256gcm", size),
-            size,
-            |b, _size| {
-                b.iter(|| {
-                    decrypt(&key, black_box(&encrypted)).unwrap()
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("aes256gcm", size), size, |b, _size| {
+            b.iter(|| decrypt(&key, black_box(&encrypted)).unwrap());
+        });
     }
 
     group.finish();
@@ -70,16 +56,12 @@ fn bench_encrypt_decrypt_roundtrip(c: &mut Criterion) {
         let data = vec![0u8; *size];
         group.throughput(Throughput::Bytes(*size as u64));
 
-        group.bench_with_input(
-            BenchmarkId::new("aes256gcm", size),
-            size,
-            |b, _size| {
-                b.iter(|| {
-                    let encrypted = encrypt(&key, black_box(&data), None).unwrap();
-                    decrypt(&key, &encrypted).unwrap()
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("aes256gcm", size), size, |b, _size| {
+            b.iter(|| {
+                let encrypted = encrypt(&key, black_box(&data), None).unwrap();
+                decrypt(&key, &encrypted).unwrap()
+            });
+        });
     }
 
     group.finish();
@@ -94,15 +76,11 @@ fn bench_encryption_with_aad(c: &mut Criterion) {
 
     group.throughput(Throughput::Bytes(1024));
     group.bench_function("with_aad", |b| {
-        b.iter(|| {
-            encrypt(&key, black_box(&data), Some(black_box(aad))).unwrap()
-        });
+        b.iter(|| encrypt(&key, black_box(&data), Some(black_box(aad))).unwrap());
     });
 
     group.bench_function("without_aad", |b| {
-        b.iter(|| {
-            encrypt(&key, black_box(&data), None).unwrap()
-        });
+        b.iter(|| encrypt(&key, black_box(&data), None).unwrap());
     });
 
     group.finish();

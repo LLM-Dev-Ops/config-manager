@@ -13,7 +13,7 @@ keywords = ["metrics", "monitoring", "prometheus", "observability", "telemetry"]
 categories = ["development-tools", "config"]
 
 [dependencies]
-prometheus = "0.13"
+prometheus = "0.14"
 lazy_static = "1.4"
 async-trait = "0.1"
 tokio = { workspace = true }

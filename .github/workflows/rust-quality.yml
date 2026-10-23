@@ -1,0 +1,56 @@
+name: Rust Quality
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_DEV_DEBUG: 0
+  CARGO_PROFILE_TEST_DEBUG: 0
+
+jobs:
+  quality:
+    name: Rust ${{ matrix.gate }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - gate: policy
+            command: cargo test --locked -p llm-config-api --test policy_boundary --test security_integration_tests
+          - gate: test
+            command: cargo test --locked --workspace
+          - gate: build
+            command: cargo build --locked --workspace
+          - gate: clippy
+            command: cargo clippy --locked --workspace --all-targets -- -D warnings
+          - gate: fmt
+            command: cargo fmt --all -- --check
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f
+        with:
+          toolchain: 1.99.0
+          components: rustfmt, clippy
+      - name: Install native prerequisites
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y pkg-config libssl-dev
+      - name: Verify committed resolution
+        run: sha256sum Cargo.lock > "$RUNNER_TEMP/config-lock.sha256"
+      - name: Run ${{ matrix.gate }} gate
+        run: ${{ matrix.command }}
+      - name: Verify lockfile unchanged
+        if: always()
+        run: |
+          sha256sum --check "$RUNNER_TEMP/config-lock.sha256"
+          git diff --exit-code -- Cargo.lock

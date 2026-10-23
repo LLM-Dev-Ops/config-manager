@@ -29,8 +29,8 @@
 //! ```
 
 use super::traits::{
-    ConfigProvider, SecretProvider, ProviderError, ProviderResult,
-    ProviderValue, ProviderHealth, ValueMetadata,
+    ConfigProvider, ProviderError, ProviderHealth, ProviderResult, ProviderValue, SecretProvider,
+    ValueMetadata,
 };
 use std::collections::HashMap;
 use std::time::Duration;
@@ -222,11 +222,14 @@ impl ConfigProvider for AwsSsmProvider {
         let value = self.get_stub(namespace, key)?;
         let path = self.build_path(namespace, key);
 
-        Ok(ProviderValue::secret(value, "aws_ssm")
-            .with_version(format!("path:{}", path)))
+        Ok(ProviderValue::secret(value, "aws_ssm").with_version(format!("path:{}", path)))
     }
 
-    async fn list(&self, namespace: &str, _prefix: Option<&str>) -> ProviderResult<HashMap<String, ProviderValue>> {
+    async fn list(
+        &self,
+        namespace: &str,
+        _prefix: Option<&str>,
+    ) -> ProviderResult<HashMap<String, ProviderValue>> {
         // Stub: SSM GetParametersByPath would be used here
         let _ = namespace;
         Ok(HashMap::new())
@@ -236,7 +239,10 @@ impl ConfigProvider for AwsSsmProvider {
         if self.config.aws_region.is_some() {
             Ok(ProviderHealth::healthy("aws_ssm"))
         } else {
-            Ok(ProviderHealth::unhealthy("aws_ssm", "AWS_REGION not configured"))
+            Ok(ProviderHealth::unhealthy(
+                "aws_ssm",
+                "AWS_REGION not configured",
+            ))
         }
     }
 }
@@ -327,7 +333,10 @@ impl ConfigProvider for AwsSecretsManagerProvider {
         if self.config.aws_region.is_some() {
             Ok(ProviderHealth::healthy("aws_secrets_manager"))
         } else {
-            Ok(ProviderHealth::unhealthy("aws_secrets_manager", "AWS_REGION not configured"))
+            Ok(ProviderHealth::unhealthy(
+                "aws_secrets_manager",
+                "AWS_REGION not configured",
+            ))
         }
     }
 }
@@ -455,7 +464,10 @@ impl ConfigProvider for GcpSecretManagerProvider {
         if self.config.gcp_project_id.is_some() {
             Ok(ProviderHealth::healthy("gcp_secret_manager"))
         } else {
-            Ok(ProviderHealth::unhealthy("gcp_secret_manager", "GCP_PROJECT_ID not configured"))
+            Ok(ProviderHealth::unhealthy(
+                "gcp_secret_manager",
+                "GCP_PROJECT_ID not configured",
+            ))
         }
     }
 }
@@ -567,7 +579,10 @@ impl ConfigProvider for AzureKeyVaultProvider {
         if self.config.azure_vault_url.is_some() {
             Ok(ProviderHealth::healthy("azure_key_vault"))
         } else {
-            Ok(ProviderHealth::unhealthy("azure_key_vault", "AZURE_VAULT_URL not configured"))
+            Ok(ProviderHealth::unhealthy(
+                "azure_key_vault",
+                "AZURE_VAULT_URL not configured",
+            ))
         }
     }
 }
@@ -628,8 +643,7 @@ mod tests {
     async fn test_aws_ssm_stub() {
         std::env::set_var("AWS_SSM_DATABASE_HOST", "localhost");
 
-        let config = CloudProviderConfig::default()
-            .with_aws_region("us-east-1");
+        let config = CloudProviderConfig::default().with_aws_region("us-east-1");
         let provider = AwsSsmProvider::new(config).unwrap();
 
         let value = provider.get("database", "host").await.unwrap();
@@ -643,8 +657,7 @@ mod tests {
     async fn test_aws_secrets_manager_stub() {
         std::env::set_var("AWS_SECRET_APP_API_KEY", "secret123");
 
-        let config = CloudProviderConfig::default()
-            .with_aws_region("us-east-1");
+        let config = CloudProviderConfig::default().with_aws_region("us-east-1");
         let provider = AwsSecretsManagerProvider::new(config).unwrap();
 
         let value = provider.get("app", "api_key").await.unwrap();
@@ -657,8 +670,7 @@ mod tests {
     async fn test_gcp_secret_manager_stub() {
         std::env::set_var("GCP_SECRET_DB_PASSWORD", "mypassword");
 
-        let config = CloudProviderConfig::default()
-            .with_gcp_project("my-project");
+        let config = CloudProviderConfig::default().with_gcp_project("my-project");
         let provider = GcpSecretManagerProvider::new(config).unwrap();
 
         let value = provider.get("db", "password").await.unwrap();
@@ -671,8 +683,8 @@ mod tests {
     async fn test_azure_key_vault_stub() {
         std::env::set_var("AZURE_SECRET_SERVICE_TOKEN", "token123");
 
-        let config = CloudProviderConfig::default()
-            .with_azure_vault("https://myvault.vault.azure.net");
+        let config =
+            CloudProviderConfig::default().with_azure_vault("https://myvault.vault.azure.net");
         let provider = AzureKeyVaultProvider::new(config).unwrap();
 
         let value = provider.get("service", "token").await.unwrap();
@@ -683,8 +695,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_provider_not_found() {
-        let config = CloudProviderConfig::default()
-            .with_aws_region("us-east-1");
+        let config = CloudProviderConfig::default().with_aws_region("us-east-1");
         let provider = AwsSsmProvider::new(config).unwrap();
 
         let result = provider.get("nonexistent", "key").await;
