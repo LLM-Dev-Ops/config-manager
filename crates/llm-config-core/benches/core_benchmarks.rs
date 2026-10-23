@@ -21,7 +21,7 @@ fn bench_config_set(c: &mut Criterion) {
                         manager
                             .set(
                                 "benchmark/ns",
-                                &format!("key{}", i),
+                                format!("key{}", i),
                                 ConfigValue::String(format!("value{}", i)),
                                 Environment::Development,
                                 "bench-user",
@@ -47,7 +47,7 @@ fn bench_config_get(c: &mut Criterion) {
         manager
             .set(
                 "benchmark/ns",
-                &format!("key{}", i),
+                format!("key{}", i),
                 ConfigValue::String(format!("value{}", i)),
                 Environment::Development,
                 "bench-user",
@@ -58,7 +58,11 @@ fn bench_config_get(c: &mut Criterion) {
     group.bench_function("single_get", |b| {
         b.iter(|| {
             manager
-                .get(black_box("benchmark/ns"), black_box("key500"), Environment::Development)
+                .get(
+                    black_box("benchmark/ns"),
+                    black_box("key500"),
+                    Environment::Development,
+                )
                 .unwrap()
         });
     });
@@ -117,7 +121,7 @@ fn bench_config_list(c: &mut Criterion) {
                 manager
                     .set(
                         "benchmark/ns",
-                        &format!("key{}", i),
+                        format!("key{}", i),
                         ConfigValue::String(format!("value{}", i)),
                         Environment::Development,
                         "bench-user",
@@ -152,7 +156,7 @@ fn bench_secret_operations(c: &mut Criterion) {
             manager
                 .set_secret(
                     "benchmark/secrets",
-                    &format!("secret{}", counter),
+                    format!("secret{}", counter),
                     black_box(secret_data),
                     Environment::Production,
                     "bench-user",

@@ -81,11 +81,7 @@ pub fn create_router(manager: Arc<ConfigManager>, security_state: SecurityState)
 /// Start the HTTP server
 pub async fn serve(manager: Arc<ConfigManager>, config: ServerConfig) -> anyhow::Result<()> {
     // Create security state
-    let security_state = if config.enable_security {
-        SecurityState::new()
-    } else {
-        SecurityState::new() // Always create but can be configured differently
-    };
+    let security_state = SecurityState::new();
 
     let app = create_router(manager, security_state);
 

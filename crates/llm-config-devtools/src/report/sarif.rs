@@ -1,22 +1,28 @@
 //! SARIF (Static Analysis Results Interchange Format) report generator.
 //!
 //! SARIF is the format used by GitHub Security tab to display security findings.
-//! Specification: https://sarifweb.azurewebsites.net/
+//! Specification: <https://sarifweb.azurewebsites.net>/
 
 use crate::error::Result;
 use crate::security::{SecurityReport, Severity};
 use serde_json::json;
 
 /// Generate a SARIF report.
+///
+/// # Errors
+/// Returns an error when the SARIF document cannot be serialized.
 pub fn generate(report: &SecurityReport) -> Result<String> {
     let mut results = Vec::new();
 
     for finding in &report.findings {
-        let rule_id = format!("{}_{}", finding.category, finding.severity.to_string().to_lowercase());
+        let rule_id = format!(
+            "{}_{}",
+            finding.category,
+            finding.severity.to_string().to_lowercase()
+        );
 
         let level = match finding.severity {
-            Severity::Critical => "error",
-            Severity::High => "error",
+            Severity::Critical | Severity::High => "error",
             Severity::Medium => "warning",
             Severity::Low => "note",
         };

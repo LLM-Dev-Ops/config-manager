@@ -34,27 +34,26 @@
 //! let value = chain.get("database", "connection_string").await?;
 //! ```
 
-pub mod traits;
+pub mod bundles;
+pub mod chain;
+pub mod cloud;
+pub mod encrypted;
 pub mod env;
 pub mod keyring;
-pub mod encrypted;
-pub mod bundles;
-pub mod cloud;
+pub mod traits;
 pub mod vault;
-pub mod chain;
 
 // Re-export core types
-pub use traits::{ConfigProvider, SecretProvider, ProviderError, ProviderResult};
 pub use chain::ProviderChain;
+pub use traits::{ConfigProvider, ProviderError, ProviderResult, SecretProvider};
 
 // Re-export provider implementations
-pub use env::{EnvProvider, DotEnvProvider};
-pub use keyring::KeyringProvider;
-pub use encrypted::EncryptedFileProvider;
-pub use bundles::{JsonProvider, TomlProvider, YamlProvider, BundleProvider};
+pub use bundles::{BundleProvider, JsonProvider, TomlProvider, YamlProvider};
 pub use cloud::{
-    AwsSsmProvider, AwsSecretsManagerProvider,
-    GcpSecretManagerProvider, AzureKeyVaultProvider,
-    CloudProviderConfig,
+    AwsSecretsManagerProvider, AwsSsmProvider, AzureKeyVaultProvider, CloudProviderConfig,
+    GcpSecretManagerProvider,
 };
-pub use vault::{VaultProvider, VaultConfig, VaultAuthMethod};
+pub use encrypted::EncryptedFileProvider;
+pub use env::{DotEnvProvider, EnvProvider};
+pub use keyring::KeyringProvider;
+pub use vault::{VaultAuthMethod, VaultConfig, VaultProvider};

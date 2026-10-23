@@ -4,6 +4,9 @@ use crate::error::Result;
 use crate::security::SecurityReport;
 
 /// Generate a YAML report.
+///
+/// # Errors
+/// Returns an error when the report cannot be serialized as YAML.
 pub fn generate(report: &SecurityReport) -> Result<String> {
     let yaml = serde_yaml::to_string(report)?;
     Ok(yaml)

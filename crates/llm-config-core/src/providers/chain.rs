@@ -18,7 +18,7 @@
 //! let value = chain.get("database", "host").await?;
 //! ```
 
-use super::traits::{ConfigProvider, ProviderError, ProviderResult, ProviderValue, ProviderHealth};
+use super::traits::{ConfigProvider, ProviderError, ProviderHealth, ProviderResult, ProviderValue};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -34,7 +34,10 @@ pub struct ProviderChain {
 impl std::fmt::Debug for ProviderChain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ProviderChain")
-            .field("providers", &self.providers.iter().map(|p| p.name()).collect::<Vec<_>>())
+            .field(
+                "providers",
+                &self.providers.iter().map(|p| p.name()).collect::<Vec<_>>(),
+            )
             .finish()
     }
 }
@@ -141,7 +144,7 @@ impl ConfigProvider for ProviderChain {
     async fn get(&self, namespace: &str, key: &str) -> ProviderResult<ProviderValue> {
         if self.providers.is_empty() {
             return Err(ProviderError::Unavailable(
-                "No providers configured in chain".to_string()
+                "No providers configured in chain".to_string(),
             ));
         }
 
@@ -175,7 +178,11 @@ impl ConfigProvider for ProviderChain {
         }))
     }
 
-    async fn list(&self, namespace: &str, prefix: Option<&str>) -> ProviderResult<HashMap<String, ProviderValue>> {
+    async fn list(
+        &self,
+        namespace: &str,
+        prefix: Option<&str>,
+    ) -> ProviderResult<HashMap<String, ProviderValue>> {
         let mut result = HashMap::new();
 
         // Collect from all providers, later providers override earlier ones
@@ -321,16 +328,14 @@ pub fn development_chain() -> ProviderChain {
 /// 1. Environment variables (highest priority)
 /// 2. No file-based providers (secrets should come from env or secret managers)
 pub fn production_chain() -> ProviderChain {
-    ProviderChainBuilder::new()
-        .with_env()
-        .build()
+    ProviderChainBuilder::new().with_env().build()
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use super::super::env::EnvProvider;
     use super::super::bundles::JsonProvider;
+    use super::super::env::EnvProvider;
+    use super::*;
 
     #[tokio::test]
     async fn test_empty_chain() {
@@ -392,11 +397,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_chain_list() {
-        let json1 = JsonProvider::from_string(r#"{"db": {"host": "host1", "port": "5432"}}"#).unwrap();
-        let json2 = JsonProvider::from_string(r#"{"db": {"host": "host2", "user": "admin"}}"#).unwrap();
+        let json1 =
+            JsonProvider::from_string(r#"{"db": {"host": "host1", "port": "5432"}}"#).unwrap();
+        let json2 =
+            JsonProvider::from_string(r#"{"db": {"host": "host2", "user": "admin"}}"#).unwrap();
 
         let chain = ProviderChain::new()
-            .with_provider(json1)  // Higher priority
+            .with_provider(json1) // Higher priority
             .with_provider(json2);
 
         let values = chain.list("db", None).await.unwrap();
@@ -404,7 +411,7 @@ mod tests {
         // Should have all keys, with json1's values taking priority
         assert_eq!(values.len(), 3);
         assert_eq!(values.get("host").unwrap().value, "host1"); // From json1
-        assert_eq!(values.get("port").unwrap().value, "5432");  // From json1
+        assert_eq!(values.get("port").unwrap().value, "5432"); // From json1
         assert_eq!(values.get("user").unwrap().value, "admin"); // From json2
     }
 
@@ -412,8 +419,7 @@ mod tests {
     async fn test_chain_exists() {
         let json = JsonProvider::from_string(r#"{"database": {"host": "localhost"}}"#).unwrap();
 
-        let chain = ProviderChain::new()
-            .with_provider(json);
+        let chain = ProviderChain::new().with_provider(json);
 
         assert!(chain.exists("database", "host").await.unwrap());
         assert!(!chain.exists("database", "nonexistent").await.unwrap());
@@ -424,9 +430,7 @@ mod tests {
         let json = JsonProvider::from_string(r#"{}"#).unwrap();
         let env = EnvProvider::new();
 
-        let chain = ProviderChain::new()
-            .with_provider(env)
-            .with_provider(json);
+        let chain = ProviderChain::new().with_provider(env).with_provider(json);
 
         let names = chain.provider_names();
         assert_eq!(names, vec!["env", "json"]);
@@ -437,9 +441,7 @@ mod tests {
         let json = JsonProvider::from_string(r#"{}"#).unwrap();
         let env = EnvProvider::new();
 
-        let chain = ProviderChain::new()
-            .with_provider(env)
-            .with_provider(json);
+        let chain = ProviderChain::new().with_provider(env).with_provider(json);
 
         let summary = chain.health_summary();
         assert_eq!(summary.total_providers, 2);

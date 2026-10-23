@@ -106,11 +106,7 @@ impl ExecutionSpan {
         let now = Utc::now();
         self.status = SpanStatus::Completed;
         self.ended_at = Some(now);
-        self.duration_ms = Some(
-            (now - self.started_at)
-                .num_milliseconds()
-                .max(0) as u64,
-        );
+        self.duration_ms = Some((now - self.started_at).num_milliseconds().max(0) as u64);
     }
 
     /// Mark the span as failed with an error message.
@@ -118,11 +114,7 @@ impl ExecutionSpan {
         let now = Utc::now();
         self.status = SpanStatus::Failed;
         self.ended_at = Some(now);
-        self.duration_ms = Some(
-            (now - self.started_at)
-                .num_milliseconds()
-                .max(0) as u64,
-        );
+        self.duration_ms = Some((now - self.started_at).num_milliseconds().max(0) as u64);
         self.error = Some(error);
     }
 

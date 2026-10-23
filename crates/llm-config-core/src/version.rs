@@ -2,8 +2,8 @@
 
 pub use llm_config_storage::VersionEntry;
 
-use chrono::Utc;
 use crate::{ConfigEntry, Result};
+use chrono::Utc;
 
 /// Version control manager
 pub struct VersionControl {
@@ -75,7 +75,10 @@ impl VersionControl {
             self.storage.set(config.clone())?;
 
             // Create a snapshot of the rollback
-            self.create_snapshot(&config, Some(format!("Rollback to version {}", target_version)))?;
+            self.create_snapshot(
+                &config,
+                Some(format!("Rollback to version {}", target_version)),
+            )?;
 
             Ok(Some(config))
         } else {
@@ -87,7 +90,7 @@ impl VersionControl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use llm_config_storage::{Environment, ConfigValue, file::FileStorage};
+    use llm_config_storage::{file::FileStorage, ConfigValue, Environment};
     use tempfile::TempDir;
 
     #[test]
@@ -103,7 +106,9 @@ mod tests {
             Environment::Development,
         );
 
-        let snapshot = vc.create_snapshot(&config, Some("Initial version".to_string())).unwrap();
+        let snapshot = vc
+            .create_snapshot(&config, Some("Initial version".to_string()))
+            .unwrap();
 
         assert_eq!(snapshot.version, config.version);
         assert_eq!(snapshot.namespace, config.namespace);
@@ -123,13 +128,17 @@ mod tests {
             Environment::Development,
         );
 
-        vc.create_snapshot(&config, Some("Version 1".to_string())).unwrap();
+        vc.create_snapshot(&config, Some("Version 1".to_string()))
+            .unwrap();
 
         config.version = 2;
         config.value = ConfigValue::String("v2".to_string());
-        vc.create_snapshot(&config, Some("Version 2".to_string())).unwrap();
+        vc.create_snapshot(&config, Some("Version 2".to_string()))
+            .unwrap();
 
-        let history = vc.get_history("test", "key", Environment::Development).unwrap();
+        let history = vc
+            .get_history("test", "key", Environment::Development)
+            .unwrap();
         assert_eq!(history.len(), 2);
         assert_eq!(history[0].version, 2); // Most recent first
         assert_eq!(history[1].version, 1);

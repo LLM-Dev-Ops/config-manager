@@ -40,7 +40,7 @@ lazy_static! {
         },
         SecretPattern {
             name: "Bearer Token",
-            regex: Regex::new(r#"(?i)bearer\s+([a-zA-Z0-9_\-\.]{20,})"#).unwrap(),
+            regex: Regex::new(r"(?i)bearer\s+([a-zA-Z0-9_\-\.]{20,})").unwrap(),
             severity: Severity::High,
         },
         SecretPattern {
@@ -60,12 +60,12 @@ lazy_static! {
         },
         SecretPattern {
             name: "RSA Private Key",
-            regex: Regex::new(r#"-----BEGIN (RSA|DSA|EC) PRIVATE KEY-----"#).unwrap(),
+            regex: Regex::new(r"-----BEGIN (RSA|DSA|EC) PRIVATE KEY-----").unwrap(),
             severity: Severity::Critical,
         },
         SecretPattern {
             name: "GitHub Token",
-            regex: Regex::new(r#"gh[pousr]_[A-Za-z0-9_]{36,}"#).unwrap(),
+            regex: Regex::new(r"gh[pousr]_[A-Za-z0-9_]{36,}").unwrap(),
             severity: Severity::Critical,
         },
         SecretPattern {
@@ -90,6 +90,7 @@ pub struct SecretScanner {
 
 impl SecretScanner {
     /// Create a new secret scanner.
+    #[must_use]
     pub fn new(project_root: &Path) -> Self {
         Self {
             project_root: project_root.to_path_buf(),
@@ -97,6 +98,9 @@ impl SecretScanner {
     }
 
     /// Scan for hardcoded secrets.
+    ///
+    /// # Errors
+    /// Returns an error when the project tree cannot be traversed.
     pub fn scan(&self) -> Result<Vec<Finding>> {
         tracing::info!("Scanning for hardcoded secrets");
 
@@ -112,7 +116,7 @@ impl SecretScanner {
 
             if Self::should_scan(path) {
                 if let Ok(content) = fs::read_to_string(path) {
-                    findings.extend(self.scan_file(path, &content)?);
+                    findings.extend(self.scan_file(path, &content));
                 }
             }
         }
@@ -132,17 +136,17 @@ impl SecretScanner {
     }
 
     fn should_scan(path: &Path) -> bool {
-        if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
-            matches!(
-                ext,
-                "rs" | "toml" | "yaml" | "yml" | "json" | "env" | "sh" | "py" | "js" | "ts"
-            )
-        } else {
-            false
-        }
+        path.extension()
+            .and_then(|s| s.to_str())
+            .is_some_and(|ext| {
+                matches!(
+                    ext,
+                    "rs" | "toml" | "yaml" | "yml" | "json" | "env" | "sh" | "py" | "js" | "ts"
+                )
+            })
     }
 
-    fn scan_file(&self, path: &Path, content: &str) -> Result<Vec<Finding>> {
+    fn scan_file(&self, path: &Path, content: &str) -> Vec<Finding> {
         let mut findings = Vec::new();
         let mut pending_test_module = false;
         let mut test_module_depth: Option<i32> = None;
@@ -209,7 +213,7 @@ impl SecretScanner {
             }
         }
 
-        Ok(findings)
+        findings
     }
 
     fn is_false_positive(line: &str) -> bool {
@@ -246,7 +250,7 @@ impl SecretScanner {
                     if secret_str.len() > 4 {
                         let visible = &secret_str[..4];
                         let masked = "*".repeat(secret_str.len() - 4);
-                        redacted = redacted.replace(secret_str, &format!("{}{}", visible, masked));
+                        redacted = redacted.replace(secret_str, &format!("{visible}{masked}"));
                     }
                 }
             }
@@ -321,9 +325,7 @@ mod tests {
 const SAFE_VALUE: &str = "public";
 "#;
 
-        let findings = scanner
-            .scan_file(Path::new("src/config.rs"), content)
-            .unwrap();
+        let findings = scanner.scan_file(Path::new("src/config.rs"), content);
         assert!(findings.is_empty());
     }
 

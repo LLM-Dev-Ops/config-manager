@@ -14,6 +14,7 @@ use chacha20poly1305::{
     ChaCha20Poly1305, Nonce as ChaCha20Nonce,
 };
 
+#[cfg(not(feature = "ring-crypto"))]
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -66,16 +67,11 @@ pub const NONCE_SIZE: usize = 12;
 pub const TAG_SIZE: usize = 16;
 
 /// Encryption algorithm identifier
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub enum Algorithm {
     #[serde(rename = "aes-256-gcm")]
+    #[default]
     Aes256Gcm,
-}
-
-impl Default for Algorithm {
-    fn default() -> Self {
-        Algorithm::Aes256Gcm
-    }
 }
 
 /// A cryptographic key that is automatically zeroed when dropped
@@ -295,10 +291,7 @@ pub fn encrypt(
 }
 
 /// Decrypt ciphertext using AES-256-GCM (native) or ChaCha20-Poly1305 (WASM)
-pub fn decrypt(
-    key: &SecretKey,
-    encrypted: &EncryptedData,
-) -> Result<Vec<u8>> {
+pub fn decrypt(key: &SecretKey, encrypted: &EncryptedData) -> Result<Vec<u8>> {
     if encrypted.algorithm != Algorithm::Aes256Gcm {
         return Err(CryptoError::DecryptionFailed(
             "Only AES-256-GCM is currently supported".to_string(),

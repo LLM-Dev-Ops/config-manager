@@ -363,24 +363,6 @@ impl IntoResponse for SecurityResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use llm_config_security::{RateLimitConfig, SecurityPolicy};
-    use std::net::{IpAddr, Ipv4Addr};
-
-    fn create_test_security_state() -> SecurityState {
-        let rate_limiter = RateLimiter::new(RateLimitConfig {
-            authenticated_rps: 100,
-            unauthenticated_rps: 10,
-            burst_size: 50,
-            window_seconds: 60,
-            ban_duration_seconds: 3600,
-            ban_threshold: 10,
-        });
-
-        let input_validator = InputValidator::default();
-        let policy_enforcer = PolicyEnforcer::new(SecurityPolicy::default());
-
-        SecurityState::with_components(rate_limiter, input_validator, policy_enforcer)
-    }
 
     #[test]
     fn test_security_state_creation() {

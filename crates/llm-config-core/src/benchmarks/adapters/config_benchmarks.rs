@@ -66,12 +66,8 @@ impl BenchTarget for ConfigGetBenchmark {
         }
         let duration = start.elapsed();
 
-        BenchmarkResult::throughput(
-            self.id(),
-            duration.as_nanos(),
-            self.iterations as u64,
-        )
-        .with_metric("operation", serde_json::json!("get"))
+        BenchmarkResult::throughput(self.id(), duration.as_nanos(), self.iterations as u64)
+            .with_metric("operation", serde_json::json!("get"))
     }
 }
 
@@ -133,12 +129,8 @@ impl BenchTarget for ConfigSetBenchmark {
         }
         let duration = start.elapsed();
 
-        BenchmarkResult::throughput(
-            self.id(),
-            duration.as_nanos(),
-            self.iterations as u64,
-        )
-        .with_metric("operation", serde_json::json!("set"))
+        BenchmarkResult::throughput(self.id(), duration.as_nanos(), self.iterations as u64)
+            .with_metric("operation", serde_json::json!("set"))
     }
 }
 
@@ -203,13 +195,9 @@ impl BenchTarget for ConfigListBenchmark {
         }
         let duration = start.elapsed();
 
-        BenchmarkResult::throughput(
-            self.id(),
-            duration.as_nanos(),
-            self.iterations as u64,
-        )
-        .with_metric("operation", serde_json::json!("list"))
-        .with_metric("entry_count", serde_json::json!(self.entry_count))
+        BenchmarkResult::throughput(self.id(), duration.as_nanos(), self.iterations as u64)
+            .with_metric("operation", serde_json::json!("list"))
+            .with_metric("entry_count", serde_json::json!(self.entry_count))
     }
 }
 
@@ -277,13 +265,9 @@ impl BenchTarget for ConfigMergeBenchmark {
         }
         let duration = start.elapsed();
 
-        BenchmarkResult::throughput(
-            self.id(),
-            duration.as_nanos(),
-            self.iterations as u64,
-        )
-        .with_metric("operation", serde_json::json!("merge"))
-        .with_metric("environment_count", serde_json::json!(environments.len()))
+        BenchmarkResult::throughput(self.id(), duration.as_nanos(), self.iterations as u64)
+            .with_metric("operation", serde_json::json!("merge"))
+            .with_metric("environment_count", serde_json::json!(environments.len()))
     }
 }
 
@@ -349,12 +333,8 @@ impl BenchTarget for ConfigOverrideBenchmark {
         }
         let duration = start.elapsed();
 
-        BenchmarkResult::throughput(
-            self.id(),
-            duration.as_nanos(),
-            self.iterations as u64,
-        )
-        .with_metric("operation", serde_json::json!("override"))
+        BenchmarkResult::throughput(self.id(), duration.as_nanos(), self.iterations as u64)
+            .with_metric("operation", serde_json::json!("override"))
     }
 }
 
@@ -423,13 +403,9 @@ impl BenchTarget for SecretSetBenchmark {
         }
         let duration = start.elapsed();
 
-        BenchmarkResult::throughput(
-            self.id(),
-            duration.as_nanos(),
-            self.iterations as u64,
-        )
-        .with_metric("operation", serde_json::json!("secret_set"))
-        .with_metric("secret_size_bytes", serde_json::json!(secret_data.len()))
+        BenchmarkResult::throughput(self.id(), duration.as_nanos(), self.iterations as u64)
+            .with_metric("operation", serde_json::json!("secret_set"))
+            .with_metric("secret_size_bytes", serde_json::json!(secret_data.len()))
     }
 }
 
@@ -496,12 +472,8 @@ impl BenchTarget for SecretGetBenchmark {
         }
         let duration = start.elapsed();
 
-        BenchmarkResult::throughput(
-            self.id(),
-            duration.as_nanos(),
-            self.iterations as u64,
-        )
-        .with_metric("operation", serde_json::json!("secret_get"))
-        .with_metric("secret_size_bytes", serde_json::json!(secret_data.len()))
+        BenchmarkResult::throughput(self.id(), duration.as_nanos(), self.iterations as u64)
+            .with_metric("operation", serde_json::json!("secret_get"))
+            .with_metric("secret_size_bytes", serde_json::json!(secret_data.len()))
     }
 }

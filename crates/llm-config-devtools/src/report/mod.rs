@@ -38,12 +38,15 @@ impl std::str::FromStr for OutputFormat {
             "yaml" | "yml" => Ok(Self::Yaml),
             "markdown" | "md" => Ok(Self::Markdown),
             "sarif" => Ok(Self::Sarif),
-            _ => Err(DevtoolsError::Config(format!("Unknown output format: {}", s))),
+            _ => Err(DevtoolsError::Config(format!("Unknown output format: {s}"))),
         }
     }
 }
 
 /// Generate a report in the specified format.
+///
+/// # Errors
+/// Returns an error when the selected formatter cannot serialize the report.
 pub fn generate_report(report: &SecurityReport, format: OutputFormat) -> Result<String> {
     match format {
         OutputFormat::Json => json::generate(report),
@@ -54,6 +57,9 @@ pub fn generate_report(report: &SecurityReport, format: OutputFormat) -> Result<
 }
 
 /// Write a report to a file.
+///
+/// # Errors
+/// Returns an error when formatting fails or the output file cannot be written.
 pub fn write_report(report: &SecurityReport, format: OutputFormat, path: &Path) -> Result<()> {
     let content = generate_report(report, format)?;
     fs::write(path, content)?;
@@ -73,8 +79,14 @@ mod tests {
             "markdown".parse::<OutputFormat>().unwrap(),
             OutputFormat::Markdown
         );
-        assert_eq!("md".parse::<OutputFormat>().unwrap(), OutputFormat::Markdown);
-        assert_eq!("sarif".parse::<OutputFormat>().unwrap(), OutputFormat::Sarif);
+        assert_eq!(
+            "md".parse::<OutputFormat>().unwrap(),
+            OutputFormat::Markdown
+        );
+        assert_eq!(
+            "sarif".parse::<OutputFormat>().unwrap(),
+            OutputFormat::Sarif
+        );
     }
 
     #[test]

@@ -1,16 +1,16 @@
 //! Core logic for LLM Config Manager
 
-pub mod config;
-pub mod manager;
-pub mod version;
-pub mod error_utils;
 pub mod benchmarks;
+pub mod config;
+pub mod error_utils;
+pub mod manager;
 pub mod providers;
+pub mod version;
 
 pub use config::*;
+pub use error_utils::*;
 pub use manager::*;
 pub use version::*;
-pub use error_utils::*;
 
 use thiserror::Error;
 

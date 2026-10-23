@@ -14,6 +14,7 @@ pub struct ClippyScanner {
 
 impl ClippyScanner {
     /// Create a new clippy scanner.
+    #[must_use]
     pub fn new(project_root: &Path) -> Self {
         Self {
             project_root: project_root.to_path_buf(),
@@ -21,11 +22,14 @@ impl ClippyScanner {
     }
 
     /// Run clippy security scan.
+    ///
+    /// # Errors
+    /// Returns an error when the Clippy process cannot be started.
     pub fn scan(&self) -> Result<Vec<Finding>> {
         tracing::info!("Running clippy security lints");
 
         // Check if clippy is available
-        if !self.is_clippy_available() {
+        if !Self::is_clippy_available() {
             tracing::warn!("Clippy not available, skipping scan");
             return Ok(Vec::new());
         }
@@ -64,10 +68,10 @@ impl ClippyScanner {
         }
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        self.parse_clippy_output(&stdout)
+        Ok(Self::parse_clippy_output(&stdout))
     }
 
-    fn is_clippy_available(&self) -> bool {
+    fn is_clippy_available() -> bool {
         Command::new("cargo")
             .arg("clippy")
             .arg("--version")
@@ -75,7 +79,7 @@ impl ClippyScanner {
             .is_ok()
     }
 
-    fn parse_clippy_output(&self, output: &str) -> Result<Vec<Finding>> {
+    fn parse_clippy_output(output: &str) -> Vec<Finding> {
         let mut findings = Vec::new();
 
         for line in output.lines() {
@@ -83,7 +87,7 @@ impl ClippyScanner {
                 if let Some(msg) = message.get("message") {
                     if let Some(level) = msg.get("level").and_then(|l| l.as_str()) {
                         if level == "warning" || level == "error" {
-                            if let Some(finding) = self.parse_clippy_message(msg) {
+                            if let Some(finding) = Self::parse_clippy_message(msg) {
                                 findings.push(finding);
                             }
                         }
@@ -93,10 +97,10 @@ impl ClippyScanner {
         }
 
         tracing::info!("Found {} clippy warnings/errors", findings.len());
-        Ok(findings)
+        findings
     }
 
-    fn parse_clippy_message(&self, msg: &serde_json::Value) -> Option<Finding> {
+    fn parse_clippy_message(msg: &serde_json::Value) -> Option<Finding> {
         let message = msg.get("message")?.as_str()?.to_string();
         let code = msg
             .get("code")
@@ -111,8 +115,14 @@ impl ClippyScanner {
             .get("file_name")
             .and_then(|f| f.as_str())
             .map(PathBuf::from)?;
-        let line = span.get("line_start").and_then(|l| l.as_u64()).map(|l| l as usize);
-        let column = span.get("column_start").and_then(|c| c.as_u64()).map(|c| c as usize);
+        let line = span
+            .get("line_start")
+            .and_then(serde_json::Value::as_u64)
+            .and_then(|line| usize::try_from(line).ok());
+        let column = span
+            .get("column_start")
+            .and_then(serde_json::Value::as_u64)
+            .and_then(|column| usize::try_from(column).ok());
 
         let snippet = span
             .get("text")
@@ -120,7 +130,7 @@ impl ClippyScanner {
             .and_then(|arr| arr.first())
             .and_then(|t| t.get("text"))
             .and_then(|t| t.as_str())
-            .map(|s| s.to_string());
+            .map(std::string::ToString::to_string);
 
         let severity = if code.contains("unsafe") || code.contains("security") {
             Severity::High
@@ -133,13 +143,15 @@ impl ClippyScanner {
         Some(Finding {
             severity,
             category: "clippy".to_string(),
-            title: format!("Clippy: {}", code),
+            title: format!("Clippy: {code}"),
             message,
             file,
             line,
             column,
             snippet,
-            recommendation: Some("Run 'cargo clippy --fix' to automatically fix some issues".to_string()),
+            recommendation: Some(
+                "Run 'cargo clippy --fix' to automatically fix some issues".to_string(),
+            ),
         })
     }
 }
@@ -156,8 +168,7 @@ mod tests {
 
     #[test]
     fn test_clippy_available() {
-        let scanner = ClippyScanner::new(Path::new("."));
         // This might be false in CI without Rust toolchain
-        let _ = scanner.is_clippy_available();
+        let _ = ClippyScanner::is_clippy_available();
     }
 }

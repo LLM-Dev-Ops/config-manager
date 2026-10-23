@@ -40,9 +40,7 @@ impl CryptoValidator {
 
         // Check for weak keys (all zeros, all ones, etc.)
         if self.is_weak_key(key) {
-            return Err(SecurityError::CryptoError(
-                "Weak key detected".to_string(),
-            ));
+            return Err(SecurityError::CryptoError("Weak key detected".to_string()));
         }
 
         // Check entropy in strict mode
@@ -140,14 +138,10 @@ impl CryptoValidator {
         let has_digit = password.chars().any(|c| c.is_ascii_digit());
         let has_special = password.chars().any(|c| !c.is_alphanumeric());
 
-        let complexity_score = [has_lowercase, has_uppercase, has_digit, has_special]
-            .iter()
-            .filter(|&&x| x)
-            .count();
-
-        if complexity_score < 3 {
+        if !(has_lowercase && has_uppercase && has_digit && has_special) {
             return Err(SecurityError::WeakPassword(
-                "Password must contain at least 3 of: lowercase, uppercase, digits, special characters".to_string(),
+                "Password must contain lowercase, uppercase, digits, and special characters"
+                    .to_string(),
             ));
         }
 
@@ -158,9 +152,26 @@ impl CryptoValidator {
     fn is_common_password(&self, password: &str) -> bool {
         // Top 100 most common passwords
         const COMMON_PASSWORDS: &[&str] = &[
-            "password", "123456", "123456789", "12345678", "12345", "1234567", "password1",
-            "123123", "1234567890", "000000", "admin", "qwerty", "abc123", "letmein",
-            "welcome", "monkey", "dragon", "master", "sunshine", "princess",
+            "password",
+            "123456",
+            "123456789",
+            "12345678",
+            "12345",
+            "1234567",
+            "password1",
+            "123123",
+            "1234567890",
+            "000000",
+            "admin",
+            "qwerty",
+            "abc123",
+            "letmein",
+            "welcome",
+            "monkey",
+            "dragon",
+            "master",
+            "sunshine",
+            "princess",
         ];
 
         let lower = password.to_lowercase();
@@ -212,31 +223,26 @@ pub struct KeyValidator {
     max_age_days: i64,
 }
 
+impl Default for KeyValidator {
+    fn default() -> Self {
+        Self::new(MAX_KEY_AGE_DAYS)
+    }
+}
+
 impl KeyValidator {
     /// Create a new key validator
     pub fn new(max_age_days: i64) -> Self {
         Self { max_age_days }
     }
 
-    /// Create with default settings
-    pub fn default() -> Self {
-        Self::new(MAX_KEY_AGE_DAYS)
-    }
-
     /// Check if a key should be rotated based on age
-    pub fn should_rotate(
-        &self,
-        created_at: chrono::DateTime<chrono::Utc>,
-    ) -> bool {
+    pub fn should_rotate(&self, created_at: chrono::DateTime<chrono::Utc>) -> bool {
         let age = chrono::Utc::now().signed_duration_since(created_at);
         age.num_days() >= self.max_age_days
     }
 
     /// Calculate days until rotation
-    pub fn days_until_rotation(
-        &self,
-        created_at: chrono::DateTime<chrono::Utc>,
-    ) -> i64 {
+    pub fn days_until_rotation(&self, created_at: chrono::DateTime<chrono::Utc>) -> i64 {
         let age = chrono::Utc::now().signed_duration_since(created_at);
         self.max_age_days - age.num_days()
     }
@@ -309,7 +315,7 @@ mod tests {
         let validator = CryptoValidator::strict();
 
         // Valid key
-        let valid_key = vec![1u8; 32];
+        let valid_key: Vec<u8> = (0..32).map(|i| (i * 7) as u8).collect();
         assert!(validator.validate_key(&valid_key).is_ok());
 
         // Too short
@@ -408,19 +414,13 @@ mod tests {
         let validator = CryptoValidator::strict();
 
         // All required character types
-        assert!(validator
-            .check_password_complexity("Abc123!@#")
-            .is_ok());
+        assert!(validator.check_password_complexity("Abc123!@#").is_ok());
 
         // Missing special characters
-        assert!(validator
-            .check_password_complexity("Abc123456")
-            .is_err());
+        assert!(validator.check_password_complexity("Abc123456").is_err());
 
         // Missing uppercase
-        assert!(validator
-            .check_password_complexity("abc123!@#")
-            .is_err());
+        assert!(validator.check_password_complexity("abc123!@#").is_err());
     }
 
     #[test]

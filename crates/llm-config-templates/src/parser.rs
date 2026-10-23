@@ -55,9 +55,7 @@ pub fn parse(template: &str) -> Result<Vec<Token>> {
 
             let var_name = var_name.trim().to_string();
             if var_name.is_empty() {
-                return Err(TemplateError::ParseError(
-                    "Empty variable name".to_string(),
-                ));
+                return Err(TemplateError::ParseError("Empty variable name".to_string()));
             }
 
             tokens.push(Token::Variable(var_name));

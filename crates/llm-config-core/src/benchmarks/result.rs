@@ -68,11 +68,7 @@ impl BenchmarkResult {
     }
 
     /// Create a throughput result
-    pub fn throughput(
-        target_id: impl Into<String>,
-        duration_ns: u128,
-        operations: u64,
-    ) -> Self {
+    pub fn throughput(target_id: impl Into<String>, duration_ns: u128, operations: u64) -> Self {
         let duration_s = duration_ns as f64 / 1_000_000_000.0;
         let ops_per_sec = if duration_s > 0.0 {
             operations as f64 / duration_s
@@ -139,10 +135,7 @@ mod tests {
 
     #[test]
     fn test_benchmark_result_new() {
-        let result = BenchmarkResult::new(
-            "test_target",
-            serde_json::json!({"duration_ns": 1000}),
-        );
+        let result = BenchmarkResult::new("test_target", serde_json::json!({"duration_ns": 1000}));
         assert_eq!(result.target_id, "test_target");
         assert_eq!(result.metrics["duration_ns"], 1000);
     }
@@ -165,7 +158,10 @@ mod tests {
     fn test_benchmark_result_with_metric() {
         let result = BenchmarkResult::timing("test", 1000)
             .with_metric("memory_bytes", serde_json::json!(1024));
-        assert_eq!(result.get_metric("memory_bytes"), Some(&serde_json::json!(1024)));
+        assert_eq!(
+            result.get_metric("memory_bytes"),
+            Some(&serde_json::json!(1024))
+        );
     }
 
     #[test]

@@ -69,12 +69,8 @@ impl BenchTarget for StorageWriteBenchmark {
         }
         let duration = start.elapsed();
 
-        BenchmarkResult::throughput(
-            self.id(),
-            duration.as_nanos(),
-            self.iterations as u64,
-        )
-        .with_metric("operation", serde_json::json!("write"))
+        BenchmarkResult::throughput(self.id(), duration.as_nanos(), self.iterations as u64)
+            .with_metric("operation", serde_json::json!("write"))
     }
 }
 
@@ -137,12 +133,8 @@ impl BenchTarget for StorageReadBenchmark {
         }
         let duration = start.elapsed();
 
-        BenchmarkResult::throughput(
-            self.id(),
-            duration.as_nanos(),
-            self.iterations as u64,
-        )
-        .with_metric("operation", serde_json::json!("read"))
+        BenchmarkResult::throughput(self.id(), duration.as_nanos(), self.iterations as u64)
+            .with_metric("operation", serde_json::json!("read"))
     }
 }
 
@@ -211,12 +203,8 @@ impl BenchTarget for StorageListBenchmark {
         }
         let duration = start.elapsed();
 
-        BenchmarkResult::throughput(
-            self.id(),
-            duration.as_nanos(),
-            self.iterations as u64,
-        )
-        .with_metric("operation", serde_json::json!("list"))
-        .with_metric("entry_count", serde_json::json!(self.entry_count))
+        BenchmarkResult::throughput(self.id(), duration.as_nanos(), self.iterations as u64)
+            .with_metric("operation", serde_json::json!("list"))
+            .with_metric("entry_count", serde_json::json!(self.entry_count))
     }
 }

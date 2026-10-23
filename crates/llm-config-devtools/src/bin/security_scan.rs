@@ -87,9 +87,15 @@ fn main() {
     };
 
     // Print banner
-    println!("{}", "═══════════════════════════════════════════".cyan().bold());
+    println!(
+        "{}",
+        "═══════════════════════════════════════════".cyan().bold()
+    );
     println!("{}", "  LLM Config Manager Security Scanner".cyan().bold());
-    println!("{}", "═══════════════════════════════════════════".cyan().bold());
+    println!(
+        "{}",
+        "═══════════════════════════════════════════".cyan().bold()
+    );
     println!();
 
     // Run security scan
@@ -180,10 +186,26 @@ fn print_summary(report: &llm_config_devtools::security::SecurityReport) {
             report.summary.total.to_string().green()
         }
     );
-    println!("  {} {}", "Critical:".dimmed(), report.summary.critical.to_string().red());
-    println!("  {} {}", "High:".dimmed(), report.summary.high.to_string().bright_red());
-    println!("  {} {}", "Medium:".dimmed(), report.summary.medium.to_string().yellow());
-    println!("  {} {}", "Low:".dimmed(), report.summary.low.to_string().blue());
+    println!(
+        "  {} {}",
+        "Critical:".dimmed(),
+        report.summary.critical.to_string().red()
+    );
+    println!(
+        "  {} {}",
+        "High:".dimmed(),
+        report.summary.high.to_string().bright_red()
+    );
+    println!(
+        "  {} {}",
+        "Medium:".dimmed(),
+        report.summary.medium.to_string().yellow()
+    );
+    println!(
+        "  {} {}",
+        "Low:".dimmed(),
+        report.summary.low.to_string().blue()
+    );
     println!(
         "  {} {:.2}s",
         "Duration:".dimmed(),

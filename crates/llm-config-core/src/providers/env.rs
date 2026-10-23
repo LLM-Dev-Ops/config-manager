@@ -26,7 +26,7 @@
 //! let secret = dotenv.get("app", "secret_key").await?;
 //! ```
 
-use super::traits::{ConfigProvider, ProviderError, ProviderResult, ProviderValue, ProviderHealth};
+use super::traits::{ConfigProvider, ProviderError, ProviderHealth, ProviderResult, ProviderValue};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
@@ -64,7 +64,10 @@ impl EnvNamingConfig {
     /// Build the environment variable name from namespace and key
     pub fn build_name(&self, namespace: &str, key: &str) -> String {
         let mut name = if let Some(ref prefix) = self.prefix {
-            format!("{}{}{}{}{}", prefix, self.separator, namespace, self.separator, key)
+            format!(
+                "{}{}{}{}{}",
+                prefix, self.separator, namespace, self.separator, key
+            )
         } else {
             format!("{}{}{}", namespace, self.separator, key)
         };
@@ -167,21 +170,21 @@ impl ConfigProvider for EnvProvider {
                 }
                 Ok(pv)
             }
-            Err(std::env::VarError::NotPresent) => {
-                Err(ProviderError::NotFound {
-                    namespace: namespace.to_string(),
-                    key: key.to_string(),
-                })
-            }
-            Err(std::env::VarError::NotUnicode(_)) => {
-                Err(ProviderError::ConfigurationError(
-                    format!("Environment variable {} contains invalid UTF-8", var_name)
-                ))
-            }
+            Err(std::env::VarError::NotPresent) => Err(ProviderError::NotFound {
+                namespace: namespace.to_string(),
+                key: key.to_string(),
+            }),
+            Err(std::env::VarError::NotUnicode(_)) => Err(ProviderError::ConfigurationError(
+                format!("Environment variable {} contains invalid UTF-8", var_name),
+            )),
         }
     }
 
-    async fn list(&self, namespace: &str, prefix: Option<&str>) -> ProviderResult<HashMap<String, ProviderValue>> {
+    async fn list(
+        &self,
+        namespace: &str,
+        prefix: Option<&str>,
+    ) -> ProviderResult<HashMap<String, ProviderValue>> {
         let mut result = HashMap::new();
         let ns_prefix = self.naming.build_name(namespace, "");
 
@@ -245,9 +248,10 @@ impl DotEnvProvider {
     pub fn from_file(path: impl AsRef<Path>) -> ProviderResult<Self> {
         let path = path.as_ref().to_path_buf();
         if !path.exists() {
-            return Err(ProviderError::ConfigurationError(
-                format!(".env file not found: {}", path.display())
-            ));
+            return Err(ProviderError::ConfigurationError(format!(
+                ".env file not found: {}",
+                path.display()
+            )));
         }
 
         Ok(Self {
@@ -284,16 +288,17 @@ impl DotEnvProvider {
         }
 
         Err(ProviderError::ConfigurationError(
-            "No .env file found in standard locations".into()
+            "No .env file found in standard locations".into(),
         ))
     }
 
     /// Load and parse the .env file
     fn load_file(&self) -> ProviderResult<()> {
         let content = std::fs::read_to_string(&self.path)?;
-        let mut cache = self.cache.write().map_err(|e| {
-            ProviderError::Other(format!("Failed to acquire lock: {}", e))
-        })?;
+        let mut cache = self
+            .cache
+            .write()
+            .map_err(|e| ProviderError::Other(format!("Failed to acquire lock: {}", e)))?;
 
         cache.clear();
 
@@ -327,18 +332,20 @@ impl DotEnvProvider {
             }
         }
 
-        *self.loaded.write().map_err(|e| {
-            ProviderError::Other(format!("Failed to acquire lock: {}", e))
-        })? = true;
+        *self
+            .loaded
+            .write()
+            .map_err(|e| ProviderError::Other(format!("Failed to acquire lock: {}", e)))? = true;
 
         Ok(())
     }
 
     /// Ensure the file is loaded
     fn ensure_loaded(&self) -> ProviderResult<()> {
-        let loaded = *self.loaded.read().map_err(|e| {
-            ProviderError::Other(format!("Failed to acquire lock: {}", e))
-        })?;
+        let loaded = *self
+            .loaded
+            .read()
+            .map_err(|e| ProviderError::Other(format!("Failed to acquire lock: {}", e)))?;
 
         if !loaded {
             self.load_file()?;
@@ -361,9 +368,10 @@ impl ConfigProvider for DotEnvProvider {
         self.ensure_loaded()?;
 
         let var_name = self.naming.build_name(namespace, key);
-        let cache = self.cache.read().map_err(|e| {
-            ProviderError::Other(format!("Failed to acquire lock: {}", e))
-        })?;
+        let cache = self
+            .cache
+            .read()
+            .map_err(|e| ProviderError::Other(format!("Failed to acquire lock: {}", e)))?;
 
         match cache.get(&var_name) {
             Some(value) => {
@@ -383,12 +391,17 @@ impl ConfigProvider for DotEnvProvider {
         }
     }
 
-    async fn list(&self, namespace: &str, prefix: Option<&str>) -> ProviderResult<HashMap<String, ProviderValue>> {
+    async fn list(
+        &self,
+        namespace: &str,
+        prefix: Option<&str>,
+    ) -> ProviderResult<HashMap<String, ProviderValue>> {
         self.ensure_loaded()?;
 
-        let cache = self.cache.read().map_err(|e| {
-            ProviderError::Other(format!("Failed to acquire lock: {}", e))
-        })?;
+        let cache = self
+            .cache
+            .read()
+            .map_err(|e| ProviderError::Other(format!("Failed to acquire lock: {}", e)))?;
 
         let mut result = HashMap::new();
         let ns_prefix = self.naming.build_name(namespace, "");
@@ -417,7 +430,10 @@ impl ConfigProvider for DotEnvProvider {
         if self.path.exists() {
             Ok(ProviderHealth::healthy("dotenv"))
         } else {
-            Ok(ProviderHealth::unhealthy("dotenv", format!("File not found: {}", self.path.display())))
+            Ok(ProviderHealth::unhealthy(
+                "dotenv",
+                format!("File not found: {}", self.path.display()),
+            ))
         }
     }
 }
@@ -436,7 +452,10 @@ mod tests {
     #[test]
     fn test_naming_config_with_prefix() {
         let config = EnvNamingConfig::with_prefix("MYAPP");
-        assert_eq!(config.build_name("database", "host"), "MYAPP__DATABASE__HOST");
+        assert_eq!(
+            config.build_name("database", "host"),
+            "MYAPP__DATABASE__HOST"
+        );
     }
 
     #[test]
@@ -450,8 +469,14 @@ mod tests {
     #[test]
     fn test_naming_handles_dots_and_slashes() {
         let config = EnvNamingConfig::default();
-        assert_eq!(config.build_name("app.config", "db.host"), "APP__CONFIG__DB__HOST");
-        assert_eq!(config.build_name("app/config", "db/host"), "APP__CONFIG__DB__HOST");
+        assert_eq!(
+            config.build_name("app.config", "db.host"),
+            "APP__CONFIG__DB__HOST"
+        );
+        assert_eq!(
+            config.build_name("app/config", "db/host"),
+            "APP__CONFIG__DB__HOST"
+        );
     }
 
     #[tokio::test]

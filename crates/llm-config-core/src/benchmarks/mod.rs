@@ -27,13 +27,13 @@
 //! }
 //! ```
 
-pub mod result;
+pub mod adapters;
 pub mod io;
 pub mod markdown;
-pub mod adapters;
+pub mod result;
 
+pub use adapters::{all_targets, get_target, list_target_ids, BenchTarget};
 pub use result::BenchmarkResult;
-pub use adapters::{BenchTarget, all_targets, get_target, list_target_ids};
 
 use std::path::Path;
 
@@ -79,7 +79,11 @@ pub fn run_benchmarks_by_category(category: &str) -> Vec<BenchmarkResult> {
     let mut results = Vec::with_capacity(targets.len());
 
     for target in targets {
-        tracing::info!(target_id = target.id(), category = category, "Running benchmark");
+        tracing::info!(
+            target_id = target.id(),
+            category = category,
+            "Running benchmark"
+        );
         let result = target.run();
         results.push(result);
     }
@@ -195,7 +199,8 @@ mod tests {
         assert!(!benchmarks.is_empty());
 
         // Verify we have benchmarks from multiple categories
-        let categories: std::collections::HashSet<_> = benchmarks.iter().map(|b| &b.category).collect();
+        let categories: std::collections::HashSet<_> =
+            benchmarks.iter().map(|b| &b.category).collect();
         assert!(categories.len() > 1);
     }
 
@@ -207,8 +212,7 @@ mod tests {
         // All results should be from the config category
         for result in &config_results {
             assert!(
-                result.target_id.starts_with("config_")
-                    || result.target_id.starts_with("secret_")
+                result.target_id.starts_with("config_") || result.target_id.starts_with("secret_")
             );
         }
     }

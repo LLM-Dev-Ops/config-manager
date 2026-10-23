@@ -37,9 +37,15 @@ fn main() {
     let cli = Cli::parse();
 
     // Print banner
-    println!("{}", "═══════════════════════════════════════════".cyan().bold());
+    println!(
+        "{}",
+        "═══════════════════════════════════════════".cyan().bold()
+    );
     println!("{}", "  Dependency Vulnerability Scanner".cyan().bold());
-    println!("{}", "═══════════════════════════════════════════".cyan().bold());
+    println!(
+        "{}",
+        "═══════════════════════════════════════════".cyan().bold()
+    );
     println!();
 
     println!("{} {}", "Scanning:".blue().bold(), cli.project.display());
@@ -59,7 +65,10 @@ fn main() {
 
     if cli.check_outdated {
         println!();
-        println!("{} Checking for outdated dependencies...", "➤".blue().bold());
+        println!(
+            "{} Checking for outdated dependencies...",
+            "➤".blue().bold()
+        );
         check_outdated_dependencies(&cli.project);
     }
 
@@ -72,11 +81,7 @@ fn main() {
     // Exit with appropriate code
     if cli.fail_on_vulnerabilities && !audit_result {
         println!();
-        eprintln!(
-            "{} {}",
-            "✗".red().bold(),
-            "Vulnerabilities detected".red()
-        );
+        eprintln!("{} {}", "✗".red().bold(), "Vulnerabilities detected".red());
         process::exit(1);
     }
 
@@ -102,28 +107,19 @@ fn is_cargo_audit_available() -> bool {
 
 fn run_cargo_audit(project_root: &PathBuf, output_file: Option<&PathBuf>) -> bool {
     let mut cmd = Command::new("cargo");
-    cmd.arg("audit")
-        .current_dir(project_root);
+    cmd.arg("audit").current_dir(project_root);
 
     if let Some(output) = output_file {
-        cmd.arg("--json")
-            .arg("--output")
-            .arg(output);
+        cmd.arg("--json").arg("--output").arg(output);
     }
 
     match cmd.status() {
         Ok(status) => {
             if status.success() {
-                println!(
-                    "  {} No vulnerabilities found",
-                    "✓".green().bold()
-                );
+                println!("  {} No vulnerabilities found", "✓".green().bold());
                 true
             } else {
-                eprintln!(
-                    "  {} Vulnerabilities detected",
-                    "✗".red().bold()
-                );
+                eprintln!("  {} Vulnerabilities detected", "✗".red().bold());
                 false
             }
         }
@@ -152,9 +148,13 @@ fn check_outdated_dependencies(project_root: &PathBuf) {
         .current_dir(project_root)
         .status()
     {
-        Ok(_) => {},
+        Ok(_) => {}
         Err(e) => {
-            eprintln!("  {} Failed to check outdated dependencies: {}", "Error:".red().bold(), e);
+            eprintln!(
+                "  {} Failed to check outdated dependencies: {}",
+                "Error:".red().bold(),
+                e
+            );
         }
     }
 }
@@ -180,9 +180,13 @@ fn check_unused_dependencies(project_root: &PathBuf) {
         .current_dir(project_root)
         .status()
     {
-        Ok(_) => {},
+        Ok(_) => {}
         Err(e) => {
-            eprintln!("  {} Failed to check unused dependencies: {}", "Error:".red().bold(), e);
+            eprintln!(
+                "  {} Failed to check unused dependencies: {}",
+                "Error:".red().bold(),
+                e
+            );
         }
     }
 }

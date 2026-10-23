@@ -43,7 +43,7 @@ impl Default for SecurityPolicy {
             min_tls_version: "1.2".to_string(),
             allowed_origins: vec![],
             max_request_size: 10 * 1024 * 1024, // 10MB
-            session_timeout: 3600,               // 1 hour
+            session_timeout: 3600,              // 1 hour
             require_mfa: false,
             allowed_endpoints: vec![],
             blocked_endpoints: vec![],
@@ -73,6 +73,12 @@ pub struct PolicyEnforcer {
     blocked_ips: HashSet<String>,
 }
 
+impl Default for PolicyEnforcer {
+    fn default() -> Self {
+        Self::new(SecurityPolicy::default())
+    }
+}
+
 impl PolicyEnforcer {
     /// Create a new policy enforcer
     pub fn new(policy: SecurityPolicy) -> Self {
@@ -81,11 +87,6 @@ impl PolicyEnforcer {
             policy,
             blocked_ips,
         }
-    }
-
-    /// Create with default policy
-    pub fn default() -> Self {
-        Self::new(SecurityPolicy::default())
     }
 
     /// Check if an IP is allowed
@@ -100,7 +101,10 @@ impl PolicyEnforcer {
 
         // Check if IP is in allowed ranges
         if !self.policy.allowed_ip_ranges.is_empty()
-            && !self.policy.allowed_ip_ranges.contains(&"0.0.0.0/0".to_string())
+            && !self
+                .policy
+                .allowed_ip_ranges
+                .contains(&"0.0.0.0/0".to_string())
         {
             // In a real implementation, we would use proper CIDR matching
             // For now, just check if IP is in the list
@@ -191,9 +195,7 @@ impl PolicyEnforcer {
         }
 
         // Check if endpoint is in allowed list (if list is not empty)
-        if !self.policy.allowed_endpoints.is_empty()
-            && !self.is_endpoint_allowed(endpoint)
-        {
+        if !self.policy.allowed_endpoints.is_empty() && !self.is_endpoint_allowed(endpoint) {
             return Err(SecurityError::PolicyViolation(format!(
                 "Endpoint {} is not in allowed list",
                 endpoint
@@ -225,11 +227,9 @@ impl PolicyEnforcer {
             return true;
         }
 
-        if pattern.ends_with('*') {
-            let prefix = &pattern[..pattern.len() - 1];
+        if let Some(prefix) = pattern.strip_suffix('*') {
             text.starts_with(prefix)
-        } else if pattern.starts_with('*') {
-            let suffix = &pattern[1..];
+        } else if let Some(suffix) = pattern.strip_prefix('*') {
             text.ends_with(suffix)
         } else {
             text == pattern
@@ -247,18 +247,13 @@ impl PolicyEnforcer {
     }
 
     /// Check session validity
-    pub fn check_session(
-        &self,
-        created_at: chrono::DateTime<chrono::Utc>,
-    ) -> SecurityResult<()> {
+    pub fn check_session(&self, created_at: chrono::DateTime<chrono::Utc>) -> SecurityResult<()> {
         let elapsed = chrono::Utc::now()
             .signed_duration_since(created_at)
             .num_seconds() as u64;
 
         if elapsed > self.policy.session_timeout {
-            return Err(SecurityError::InvalidSession(
-                "Session expired".to_string(),
-            ));
+            return Err(SecurityError::InvalidSession("Session expired".to_string()));
         }
 
         Ok(())
@@ -359,12 +354,8 @@ mod tests {
 
         let enforcer = PolicyEnforcer::new(policy);
 
-        assert!(enforcer
-            .check_origin("https://example.com")
-            .is_ok());
-        assert!(enforcer
-            .check_origin("https://evil.com")
-            .is_err());
+        assert!(enforcer.check_origin("https://example.com").is_ok());
+        assert!(enforcer.check_origin("https://evil.com").is_err());
     }
 
     #[test]
@@ -429,10 +420,7 @@ mod tests {
     #[test]
     fn test_data_classification() {
         let policy = SecurityPolicy {
-            data_classifications: vec![
-                DataClassification::Public,
-                DataClassification::Internal,
-            ],
+            data_classifications: vec![DataClassification::Public, DataClassification::Internal],
             ..Default::default()
         };
 
@@ -461,8 +449,7 @@ mod tests {
     fn test_comprehensive_check() {
         let enforcer = PolicyEnforcer::default();
 
-        let context = SecurityContext::new("user123", "192.168.1.1")
-            .with_session("sess_abc");
+        let context = SecurityContext::new("user123", "192.168.1.1").with_session("sess_abc");
 
         assert!(enforcer.check_request(&context).is_ok());
     }

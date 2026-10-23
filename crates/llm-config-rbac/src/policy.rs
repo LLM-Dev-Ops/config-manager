@@ -24,7 +24,7 @@ impl PolicyEnforcer {
     pub fn assign_role(&mut self, assignment: RoleAssignment) {
         self.assignments
             .entry(assignment.user.clone())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(assignment);
     }
 
@@ -98,8 +98,7 @@ impl PolicyEnforcer {
         action: &Action,
         scope: Option<&str>,
     ) -> bool {
-        self.check_permission(user, resource, action, scope)
-            .is_ok()
+        self.check_permission(user, resource, action, scope).is_ok()
     }
 
     /// List all users with role assignments
@@ -196,11 +195,7 @@ mod tests {
         enforcer.assign_role(RoleAssignment::new("alice", Role::Viewer));
 
         // But admin for "special" namespace
-        enforcer.assign_role(RoleAssignment::with_scope(
-            "alice",
-            Role::Admin,
-            "special",
-        ));
+        enforcer.assign_role(RoleAssignment::with_scope("alice", Role::Admin, "special"));
 
         // Can read globally
         assert!(enforcer
@@ -214,12 +209,7 @@ mod tests {
 
         // Can update in special namespace
         assert!(enforcer
-            .check_permission(
-                "alice",
-                &Resource::Config,
-                &Action::Update,
-                Some("special")
-            )
+            .check_permission("alice", &Resource::Config, &Action::Update, Some("special"))
             .is_ok());
 
         // Cannot update in other namespaces

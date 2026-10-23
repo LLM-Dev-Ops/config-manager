@@ -1,9 +1,9 @@
 //! Configuration manager - core business logic
 
 use crate::{ConfigEntry, ConfigValue, Environment, Result, VersionControl};
+use chrono::Utc;
 use llm_config_crypto::{decrypt, encrypt, SecretKey};
 use llm_config_storage::file::FileStorage;
-use chrono::Utc;
 use std::path::Path;
 
 /// Main configuration manager
@@ -33,12 +33,7 @@ impl ConfigManager {
     }
 
     /// Get a single configuration value
-    pub fn get(
-        &self,
-        namespace: &str,
-        key: &str,
-        env: Environment,
-    ) -> Result<Option<ConfigEntry>> {
+    pub fn get(&self, namespace: &str, key: &str, env: Environment) -> Result<Option<ConfigEntry>> {
         let mut entry = self.storage.get(namespace, key, env)?;
 
         // Decrypt secrets if encryption key is available
@@ -59,7 +54,9 @@ impl ConfigManager {
         env: Environment,
     ) -> Result<Option<ConfigValue>> {
         // Start with base configuration
-        let mut value = self.storage.get(namespace, key, Environment::Base)?
+        let mut value = self
+            .storage
+            .get(namespace, key, Environment::Base)?
             .map(|e| e.value);
 
         // Apply environment-specific overrides in order
@@ -134,7 +131,8 @@ impl ConfigManager {
         self.storage.set(entry.clone())?;
 
         // Create version snapshot
-        self.version_control.create_snapshot(&entry, Some("Configuration updated".to_string()))?;
+        self.version_control
+            .create_snapshot(&entry, Some("Configuration updated".to_string()))?;
 
         Ok(entry)
     }
@@ -148,10 +146,9 @@ impl ConfigManager {
         env: Environment,
         user: impl Into<String>,
     ) -> Result<ConfigEntry> {
-        let encryption_key = self.encryption_key.as_ref()
-            .ok_or_else(|| crate::ConfigError::ValidationError(
-                "Encryption key not configured".to_string()
-            ))?;
+        let encryption_key = self.encryption_key.as_ref().ok_or_else(|| {
+            crate::ConfigError::ValidationError("Encryption key not configured".to_string())
+        })?;
 
         let encrypted = encrypt(encryption_key, plaintext.as_ref(), None)?;
         let value = ConfigValue::Secret(encrypted);
@@ -166,10 +163,9 @@ impl ConfigManager {
         key: &str,
         env: Environment,
     ) -> Result<Option<Vec<u8>>> {
-        let encryption_key = self.encryption_key.as_ref()
-            .ok_or_else(|| crate::ConfigError::ValidationError(
-                "Encryption key not configured".to_string()
-            ))?;
+        let encryption_key = self.encryption_key.as_ref().ok_or_else(|| {
+            crate::ConfigError::ValidationError("Encryption key not configured".to_string())
+        })?;
 
         let entry = match self.storage.get(namespace, key, env)? {
             Some(e) => e,
@@ -182,8 +178,8 @@ impl ConfigManager {
                 Ok(Some(plaintext))
             }
             _ => Err(crate::ConfigError::ValidationError(
-                "Not a secret value".to_string()
-            ))
+                "Not a secret value".to_string(),
+            )),
         }
     }
 
@@ -373,10 +369,22 @@ mod tests {
         let manager = ConfigManager::new(temp_dir.path()).unwrap();
 
         manager
-            .set("test/ns", "key1", ConfigValue::String("val1".to_string()), Environment::Development, "user")
+            .set(
+                "test/ns",
+                "key1",
+                ConfigValue::String("val1".to_string()),
+                Environment::Development,
+                "user",
+            )
             .unwrap();
         manager
-            .set("test/ns", "key2", ConfigValue::String("val2".to_string()), Environment::Development, "user")
+            .set(
+                "test/ns",
+                "key2",
+                ConfigValue::String("val2".to_string()),
+                Environment::Development,
+                "user",
+            )
             .unwrap();
 
         let list = manager.list("test/ns", Environment::Development).unwrap();
@@ -389,13 +397,23 @@ mod tests {
         let manager = ConfigManager::new(temp_dir.path()).unwrap();
 
         manager
-            .set("test/ns", "key", ConfigValue::String("val".to_string()), Environment::Development, "user")
+            .set(
+                "test/ns",
+                "key",
+                ConfigValue::String("val".to_string()),
+                Environment::Development,
+                "user",
+            )
             .unwrap();
 
-        let deleted = manager.delete("test/ns", "key", Environment::Development).unwrap();
+        let deleted = manager
+            .delete("test/ns", "key", Environment::Development)
+            .unwrap();
         assert!(deleted);
 
-        let retrieved = manager.get("test/ns", "key", Environment::Development).unwrap();
+        let retrieved = manager
+            .get("test/ns", "key", Environment::Development)
+            .unwrap();
         assert!(retrieved.is_none());
     }
 
@@ -406,16 +424,30 @@ mod tests {
 
         // Set initial value
         manager
-            .set("test/ns", "key", ConfigValue::String("v1".to_string()), Environment::Development, "user")
+            .set(
+                "test/ns",
+                "key",
+                ConfigValue::String("v1".to_string()),
+                Environment::Development,
+                "user",
+            )
             .unwrap();
 
         // Update value
         manager
-            .set("test/ns", "key", ConfigValue::String("v2".to_string()), Environment::Development, "user")
+            .set(
+                "test/ns",
+                "key",
+                ConfigValue::String("v2".to_string()),
+                Environment::Development,
+                "user",
+            )
             .unwrap();
 
         // Get history
-        let history = manager.get_history("test/ns", "key", Environment::Development).unwrap();
+        let history = manager
+            .get_history("test/ns", "key", Environment::Development)
+            .unwrap();
         assert!(history.len() >= 2);
 
         // Rollback to version 1

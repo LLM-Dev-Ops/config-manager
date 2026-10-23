@@ -1,6 +1,6 @@
 //! Core configuration types
 
-pub use llm_config_storage::{ConfigEntry, ConfigValue, Environment, ConfigMetadata};
+pub use llm_config_storage::{ConfigEntry, ConfigMetadata, ConfigValue, Environment};
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -56,10 +56,7 @@ mod tests {
         let mut config = Config::new("test", Environment::Development);
         config.set("key", ConfigValue::String("value".to_string()));
 
-        assert_eq!(
-            config.get("key").unwrap().as_str().unwrap(),
-            "value"
-        );
+        assert_eq!(config.get("key").unwrap().as_str().unwrap(), "value");
     }
 
     #[test]
@@ -75,7 +72,10 @@ mod tests {
         base_config.merge(&override_config);
 
         assert_eq!(base_config.get("key1").unwrap().as_str().unwrap(), "base");
-        assert_eq!(base_config.get("key2").unwrap().as_str().unwrap(), "override");
+        assert_eq!(
+            base_config.get("key2").unwrap().as_str().unwrap(),
+            "override"
+        );
         assert_eq!(base_config.get("key3").unwrap().as_str().unwrap(), "new");
     }
 }

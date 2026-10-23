@@ -44,8 +44,10 @@ fn create_test_security_state() -> SecurityState {
 
     let input_validator = InputValidator::default();
 
-    let mut policy = SecurityPolicy::default();
-    policy.require_tls = false; // Disable TLS requirement for tests
+    let policy = SecurityPolicy {
+        require_tls: false, // Disable TLS requirement for tests
+        ..SecurityPolicy::default()
+    };
     let policy_enforcer = PolicyEnforcer::new(policy);
 
     SecurityState::with_components(rate_limiter, input_validator, policy_enforcer)
@@ -240,9 +242,11 @@ async fn test_blocked_ip_rejected() {
     let (manager, _temp_dir) = create_test_manager();
 
     // Create policy with blocked IP
-    let mut policy = SecurityPolicy::default();
-    policy.blocked_ips = vec!["127.0.0.1".to_string()];
-    policy.require_tls = false;
+    let policy = SecurityPolicy {
+        blocked_ips: vec!["127.0.0.1".to_string()],
+        require_tls: false,
+        ..SecurityPolicy::default()
+    };
 
     let security_state = SecurityState::with_components(
         RateLimiter::new(RateLimitConfig::default()),
@@ -271,9 +275,11 @@ async fn test_blocked_endpoint_rejected() {
     let (manager, _temp_dir) = create_test_manager();
 
     // Create policy with blocked endpoints
-    let mut policy = SecurityPolicy::default();
-    policy.blocked_endpoints = vec!["/api/v1/configs/admin/*".to_string()];
-    policy.require_tls = false;
+    let policy = SecurityPolicy {
+        blocked_endpoints: vec!["/api/v1/configs/admin/*".to_string()],
+        require_tls: false,
+        ..SecurityPolicy::default()
+    };
 
     let security_state = SecurityState::with_components(
         RateLimiter::new(RateLimitConfig::default()),
@@ -369,9 +375,11 @@ async fn test_cors_origin_validation() {
     let (manager, _temp_dir) = create_test_manager();
 
     // Create policy with allowed origins
-    let mut policy = SecurityPolicy::default();
-    policy.allowed_origins = vec!["https://example.com".to_string()];
-    policy.require_tls = false;
+    let policy = SecurityPolicy {
+        allowed_origins: vec!["https://example.com".to_string()],
+        require_tls: false,
+        ..SecurityPolicy::default()
+    };
 
     let security_state = SecurityState::with_components(
         RateLimiter::new(RateLimitConfig::default()),

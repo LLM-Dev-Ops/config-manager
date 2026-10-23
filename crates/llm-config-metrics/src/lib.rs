@@ -6,9 +6,7 @@
 pub mod collectors;
 pub mod health;
 
-use prometheus::{
-    Counter, CounterVec, Gauge, GaugeVec, Histogram, HistogramVec, Opts, Registry,
-};
+use prometheus::{Counter, CounterVec, Gauge, GaugeVec, Histogram, HistogramVec, Opts, Registry};
 use std::sync::Arc;
 use thiserror::Error;
 
@@ -138,10 +136,7 @@ impl ConfigMetrics {
         )?;
 
         let active_configs = GaugeVec::new(
-            Opts::new(
-                "config_active_total",
-                "Number of active configurations",
-            ),
+            Opts::new("config_active_total", "Number of active configurations"),
             &["namespace", "environment"],
         )?;
 
@@ -202,10 +197,8 @@ pub struct CacheMetrics {
 
 impl CacheMetrics {
     fn new(registry: Arc<Registry>) -> Result<Self> {
-        let hits_total = CounterVec::new(
-            Opts::new("cache_hits_total", "Total cache hits"),
-            &["tier"],
-        )?;
+        let hits_total =
+            CounterVec::new(Opts::new("cache_hits_total", "Total cache hits"), &["tier"])?;
 
         let misses_total = CounterVec::new(
             Opts::new("cache_misses_total", "Total cache misses"),
@@ -290,18 +283,12 @@ pub struct RbacMetrics {
 impl RbacMetrics {
     fn new(registry: Arc<Registry>) -> Result<Self> {
         let permission_checks_total = CounterVec::new(
-            Opts::new(
-                "rbac_permission_checks_total",
-                "Total permission checks",
-            ),
+            Opts::new("rbac_permission_checks_total", "Total permission checks"),
             &["resource", "action", "result"],
         )?;
 
         let permission_denials_total = CounterVec::new(
-            Opts::new(
-                "rbac_permission_denials_total",
-                "Total permission denials",
-            ),
+            Opts::new("rbac_permission_denials_total", "Total permission denials"),
             &["resource", "action"],
         )?;
 
@@ -315,7 +302,10 @@ impl RbacMetrics {
         )?;
 
         let active_roles = GaugeVec::new(
-            Opts::new("rbac_active_roles_total", "Number of active role assignments"),
+            Opts::new(
+                "rbac_active_roles_total",
+                "Number of active role assignments",
+            ),
             &["role"],
         )?;
 
@@ -386,10 +376,7 @@ impl AuditMetrics {
             .buckets(vec![0.001, 0.005, 0.01, 0.05, 0.1, 0.5]),
         )?;
 
-        let queue_size = Gauge::new(
-            "audit_queue_size",
-            "Current audit event queue size",
-        )?;
+        let queue_size = Gauge::new("audit_queue_size", "Current audit event queue size")?;
 
         registry.register(Box::new(events_total.clone()))?;
         registry.register(Box::new(events_by_user.clone()))?;
@@ -442,10 +429,7 @@ impl StorageMetrics {
             &["operation"],
         )?;
 
-        let storage_size_bytes = Gauge::new(
-            "storage_size_bytes",
-            "Total storage size in bytes",
-        )?;
+        let storage_size_bytes = Gauge::new("storage_size_bytes", "Total storage size in bytes")?;
 
         let errors_total = CounterVec::new(
             Opts::new("storage_errors_total", "Total storage errors"),
@@ -466,9 +450,7 @@ impl StorageMetrics {
     }
 
     pub fn record_operation(&self, operation: &str) {
-        self.operations_total
-            .with_label_values(&[operation])
-            .inc();
+        self.operations_total.with_label_values(&[operation]).inc();
     }
 
     pub fn observe_duration(&self, operation: &str, duration: f64) {
@@ -510,15 +492,11 @@ impl CryptoMetrics {
             &["operation"],
         )?;
 
-        let key_rotations_total = Counter::new(
-            "crypto_key_rotations_total",
-            "Total key rotations",
-        )?;
+        let key_rotations_total =
+            Counter::new("crypto_key_rotations_total", "Total key rotations")?;
 
-        let encryption_errors_total = Counter::new(
-            "crypto_encryption_errors_total",
-            "Total encryption errors",
-        )?;
+        let encryption_errors_total =
+            Counter::new("crypto_encryption_errors_total", "Total encryption errors")?;
 
         registry.register(Box::new(operations_total.clone()))?;
         registry.register(Box::new(operation_duration.clone()))?;
@@ -565,20 +543,12 @@ pub struct SystemMetrics {
 
 impl SystemMetrics {
     fn new(registry: Arc<Registry>) -> Result<Self> {
-        let uptime_seconds = Gauge::new(
-            "system_uptime_seconds",
-            "System uptime in seconds",
-        )?;
+        let uptime_seconds = Gauge::new("system_uptime_seconds", "System uptime in seconds")?;
 
-        let memory_usage_bytes = Gauge::new(
-            "system_memory_usage_bytes",
-            "Current memory usage in bytes",
-        )?;
+        let memory_usage_bytes =
+            Gauge::new("system_memory_usage_bytes", "Current memory usage in bytes")?;
 
-        let goroutines = Gauge::new(
-            "system_goroutines",
-            "Number of goroutines",
-        )?;
+        let goroutines = Gauge::new("system_goroutines", "Number of goroutines")?;
 
         let http_requests_total = CounterVec::new(
             Opts::new("http_requests_total", "Total HTTP requests"),
@@ -650,7 +620,9 @@ mod tests {
 
         registry.config().record_operation("set", "production");
         registry.config().observe_duration("set", 0.005);
-        registry.config().set_active_configs("test/ns", "production", 42);
+        registry
+            .config()
+            .set_active_configs("test/ns", "production", 42);
         registry.config().record_error("validation", "set");
 
         let metrics = registry.gather();
@@ -673,8 +645,12 @@ mod tests {
     fn test_rbac_metrics() {
         let registry = MetricsRegistry::new().unwrap();
 
-        registry.rbac().record_permission_check("config", "read", true);
-        registry.rbac().record_permission_check("config", "write", false);
+        registry
+            .rbac()
+            .record_permission_check("config", "read", true);
+        registry
+            .rbac()
+            .record_permission_check("config", "write", false);
         registry.rbac().observe_check_duration("config", 0.0001);
         registry.rbac().set_active_roles("admin", 5);
 

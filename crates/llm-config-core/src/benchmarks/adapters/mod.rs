@@ -72,16 +72,13 @@ pub fn all_targets() -> Vec<Box<dyn BenchTarget>> {
         Box::new(ConfigListBenchmark::new()),
         Box::new(ConfigMergeBenchmark::new()),
         Box::new(ConfigOverrideBenchmark::new()),
-
         // Secret loading benchmarks
         Box::new(SecretSetBenchmark::new()),
         Box::new(SecretGetBenchmark::new()),
-
         // Crypto benchmarks
         Box::new(EncryptBenchmark::new()),
         Box::new(DecryptBenchmark::new()),
         Box::new(KeyGenerationBenchmark::new()),
-
         // Storage benchmarks
         Box::new(StorageWriteBenchmark::new()),
         Box::new(StorageReadBenchmark::new()),

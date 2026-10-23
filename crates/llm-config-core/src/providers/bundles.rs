@@ -32,9 +32,7 @@
 //! let bundle = BundleProvider::from_file("config.yaml")?;
 //! ```
 
-use super::traits::{
-    ConfigProvider, ProviderError, ProviderResult, ProviderValue, ProviderHealth,
-};
+use super::traits::{ConfigProvider, ProviderError, ProviderHealth, ProviderResult, ProviderValue};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -123,9 +121,10 @@ impl JsonProvider {
     pub fn from_file(path: impl AsRef<Path>) -> ProviderResult<Self> {
         let path = path.as_ref().to_path_buf();
         if !path.exists() {
-            return Err(ProviderError::ConfigurationError(
-                format!("JSON file not found: {}", path.display())
-            ));
+            return Err(ProviderError::ConfigurationError(format!(
+                "JSON file not found: {}",
+                path.display()
+            )));
         }
 
         Ok(Self {
@@ -155,13 +154,17 @@ impl JsonProvider {
     }
 
     fn ensure_loaded(&self) -> ProviderResult<()> {
-        let loaded = self.cache.read()
+        let loaded = self
+            .cache
+            .read()
             .map_err(|e| ProviderError::Other(e.to_string()))?
             .is_some();
 
         if !loaded && !self.path.as_os_str().is_empty() {
             let config = self.load()?;
-            *self.cache.write()
+            *self
+                .cache
+                .write()
                 .map_err(|e| ProviderError::Other(e.to_string()))? = Some(config);
         }
         Ok(())
@@ -181,10 +184,13 @@ impl ConfigProvider for JsonProvider {
     async fn get(&self, namespace: &str, key: &str) -> ProviderResult<ProviderValue> {
         self.ensure_loaded()?;
 
-        let cache = self.cache.read()
+        let cache = self
+            .cache
+            .read()
             .map_err(|e| ProviderError::Other(e.to_string()))?;
 
-        let config = cache.as_ref()
+        let config = cache
+            .as_ref()
             .ok_or_else(|| ProviderError::Other("Config not loaded".to_string()))?;
 
         match config.get(namespace, key) {
@@ -196,13 +202,20 @@ impl ConfigProvider for JsonProvider {
         }
     }
 
-    async fn list(&self, namespace: &str, prefix: Option<&str>) -> ProviderResult<HashMap<String, ProviderValue>> {
+    async fn list(
+        &self,
+        namespace: &str,
+        prefix: Option<&str>,
+    ) -> ProviderResult<HashMap<String, ProviderValue>> {
         self.ensure_loaded()?;
 
-        let cache = self.cache.read()
+        let cache = self
+            .cache
+            .read()
             .map_err(|e| ProviderError::Other(e.to_string()))?;
 
-        let config = cache.as_ref()
+        let config = cache
+            .as_ref()
             .ok_or_else(|| ProviderError::Other("Config not loaded".to_string()))?;
 
         let mut result = HashMap::new();
@@ -224,7 +237,9 @@ impl ConfigProvider for JsonProvider {
     async fn refresh(&self) -> ProviderResult<()> {
         if !self.path.as_os_str().is_empty() {
             let config = self.load()?;
-            *self.cache.write()
+            *self
+                .cache
+                .write()
                 .map_err(|e| ProviderError::Other(e.to_string()))? = Some(config);
         }
         Ok(())
@@ -251,9 +266,10 @@ impl TomlProvider {
     pub fn from_file(path: impl AsRef<Path>) -> ProviderResult<Self> {
         let path = path.as_ref().to_path_buf();
         if !path.exists() {
-            return Err(ProviderError::ConfigurationError(
-                format!("TOML file not found: {}", path.display())
-            ));
+            return Err(ProviderError::ConfigurationError(format!(
+                "TOML file not found: {}",
+                path.display()
+            )));
         }
 
         Ok(Self {
@@ -286,13 +302,17 @@ impl TomlProvider {
     }
 
     fn ensure_loaded(&self) -> ProviderResult<()> {
-        let loaded = self.cache.read()
+        let loaded = self
+            .cache
+            .read()
             .map_err(|e| ProviderError::Other(e.to_string()))?
             .is_some();
 
         if !loaded && !self.path.as_os_str().is_empty() {
             let config = self.load()?;
-            *self.cache.write()
+            *self
+                .cache
+                .write()
                 .map_err(|e| ProviderError::Other(e.to_string()))? = Some(config);
         }
         Ok(())
@@ -304,15 +324,11 @@ fn toml_to_json(toml: toml::Value) -> JsonValue {
     match toml {
         toml::Value::String(s) => JsonValue::String(s),
         toml::Value::Integer(i) => JsonValue::Number(serde_json::Number::from(i)),
-        toml::Value::Float(f) => {
-            serde_json::Number::from_f64(f)
-                .map(JsonValue::Number)
-                .unwrap_or(JsonValue::Null)
-        }
+        toml::Value::Float(f) => serde_json::Number::from_f64(f)
+            .map(JsonValue::Number)
+            .unwrap_or(JsonValue::Null),
         toml::Value::Boolean(b) => JsonValue::Bool(b),
-        toml::Value::Array(arr) => {
-            JsonValue::Array(arr.into_iter().map(toml_to_json).collect())
-        }
+        toml::Value::Array(arr) => JsonValue::Array(arr.into_iter().map(toml_to_json).collect()),
         toml::Value::Table(table) => {
             let map: serde_json::Map<String, JsonValue> = table
                 .into_iter()
@@ -337,10 +353,13 @@ impl ConfigProvider for TomlProvider {
     async fn get(&self, namespace: &str, key: &str) -> ProviderResult<ProviderValue> {
         self.ensure_loaded()?;
 
-        let cache = self.cache.read()
+        let cache = self
+            .cache
+            .read()
             .map_err(|e| ProviderError::Other(e.to_string()))?;
 
-        let config = cache.as_ref()
+        let config = cache
+            .as_ref()
             .ok_or_else(|| ProviderError::Other("Config not loaded".to_string()))?;
 
         match config.get(namespace, key) {
@@ -352,13 +371,20 @@ impl ConfigProvider for TomlProvider {
         }
     }
 
-    async fn list(&self, namespace: &str, prefix: Option<&str>) -> ProviderResult<HashMap<String, ProviderValue>> {
+    async fn list(
+        &self,
+        namespace: &str,
+        prefix: Option<&str>,
+    ) -> ProviderResult<HashMap<String, ProviderValue>> {
         self.ensure_loaded()?;
 
-        let cache = self.cache.read()
+        let cache = self
+            .cache
+            .read()
             .map_err(|e| ProviderError::Other(e.to_string()))?;
 
-        let config = cache.as_ref()
+        let config = cache
+            .as_ref()
             .ok_or_else(|| ProviderError::Other("Config not loaded".to_string()))?;
 
         let mut result = HashMap::new();
@@ -380,7 +406,9 @@ impl ConfigProvider for TomlProvider {
     async fn refresh(&self) -> ProviderResult<()> {
         if !self.path.as_os_str().is_empty() {
             let config = self.load()?;
-            *self.cache.write()
+            *self
+                .cache
+                .write()
                 .map_err(|e| ProviderError::Other(e.to_string()))? = Some(config);
         }
         Ok(())
@@ -407,9 +435,10 @@ impl YamlProvider {
     pub fn from_file(path: impl AsRef<Path>) -> ProviderResult<Self> {
         let path = path.as_ref().to_path_buf();
         if !path.exists() {
-            return Err(ProviderError::ConfigurationError(
-                format!("YAML file not found: {}", path.display())
-            ));
+            return Err(ProviderError::ConfigurationError(format!(
+                "YAML file not found: {}",
+                path.display()
+            )));
         }
 
         Ok(Self {
@@ -442,13 +471,17 @@ impl YamlProvider {
     }
 
     fn ensure_loaded(&self) -> ProviderResult<()> {
-        let loaded = self.cache.read()
+        let loaded = self
+            .cache
+            .read()
             .map_err(|e| ProviderError::Other(e.to_string()))?
             .is_some();
 
         if !loaded && !self.path.as_os_str().is_empty() {
             let config = self.load()?;
-            *self.cache.write()
+            *self
+                .cache
+                .write()
                 .map_err(|e| ProviderError::Other(e.to_string()))? = Some(config);
         }
         Ok(())
@@ -505,10 +538,13 @@ impl ConfigProvider for YamlProvider {
     async fn get(&self, namespace: &str, key: &str) -> ProviderResult<ProviderValue> {
         self.ensure_loaded()?;
 
-        let cache = self.cache.read()
+        let cache = self
+            .cache
+            .read()
             .map_err(|e| ProviderError::Other(e.to_string()))?;
 
-        let config = cache.as_ref()
+        let config = cache
+            .as_ref()
             .ok_or_else(|| ProviderError::Other("Config not loaded".to_string()))?;
 
         match config.get(namespace, key) {
@@ -520,13 +556,20 @@ impl ConfigProvider for YamlProvider {
         }
     }
 
-    async fn list(&self, namespace: &str, prefix: Option<&str>) -> ProviderResult<HashMap<String, ProviderValue>> {
+    async fn list(
+        &self,
+        namespace: &str,
+        prefix: Option<&str>,
+    ) -> ProviderResult<HashMap<String, ProviderValue>> {
         self.ensure_loaded()?;
 
-        let cache = self.cache.read()
+        let cache = self
+            .cache
+            .read()
             .map_err(|e| ProviderError::Other(e.to_string()))?;
 
-        let config = cache.as_ref()
+        let config = cache
+            .as_ref()
             .ok_or_else(|| ProviderError::Other("Config not loaded".to_string()))?;
 
         let mut result = HashMap::new();
@@ -548,7 +591,9 @@ impl ConfigProvider for YamlProvider {
     async fn refresh(&self) -> ProviderResult<()> {
         if !self.path.as_os_str().is_empty() {
             let config = self.load()?;
-            *self.cache.write()
+            *self
+                .cache
+                .write()
                 .map_err(|e| ProviderError::Other(e.to_string()))? = Some(config);
         }
         Ok(())
@@ -578,7 +623,8 @@ impl BundleProvider {
     /// Create a bundle provider, auto-detecting format from file extension
     pub fn from_file(path: impl AsRef<Path>) -> ProviderResult<Self> {
         let path = path.as_ref();
-        let extension = path.extension()
+        let extension = path
+            .extension()
             .and_then(|e| e.to_str())
             .unwrap_or("")
             .to_lowercase();
@@ -587,9 +633,10 @@ impl BundleProvider {
             "json" => Ok(BundleProvider::Json(JsonProvider::from_file(path)?)),
             "toml" => Ok(BundleProvider::Toml(TomlProvider::from_file(path)?)),
             "yaml" | "yml" => Ok(BundleProvider::Yaml(YamlProvider::from_file(path)?)),
-            _ => Err(ProviderError::ConfigurationError(
-                format!("Unknown file format: {}", extension)
-            )),
+            _ => Err(ProviderError::ConfigurationError(format!(
+                "Unknown file format: {}",
+                extension
+            ))),
         }
     }
 }
@@ -620,7 +667,11 @@ impl ConfigProvider for BundleProvider {
         }
     }
 
-    async fn list(&self, namespace: &str, prefix: Option<&str>) -> ProviderResult<HashMap<String, ProviderValue>> {
+    async fn list(
+        &self,
+        namespace: &str,
+        prefix: Option<&str>,
+    ) -> ProviderResult<HashMap<String, ProviderValue>> {
         match self {
             BundleProvider::Json(p) => p.list(namespace, prefix).await,
             BundleProvider::Toml(p) => p.list(namespace, prefix).await,
