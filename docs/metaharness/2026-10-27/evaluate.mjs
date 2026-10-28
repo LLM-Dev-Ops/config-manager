@@ -13,6 +13,12 @@ const tests = rev => git('show', `${rev}:${sourcePath}`).split('#[cfg(test)]')[1
 if (!tests(parent) || tests(parent) !== tests(head)) throw Error('regression fixtures differ');
 const env = { ...process.env, CARGO_TARGET_DIR: target, CARGO_INCREMENTAL: '0',
   CARGO_PROFILE_DEV_DEBUG: '0', CARGO_PROFILE_TEST_DEBUG: '0', CARGO_PROFILE_TEST_OPT_LEVEL: '0' };
+// Fixed before evaluation; applies equally to baseline and candidate. Cold
+// compilation and all doctests must fit, rather than silently skipping either.
+const budgets = Object.freeze({ core: 180, workspace: 300, node: 30 });
+const runBounded = (command, args, seconds) => spawnSync('timeout',
+  ['--kill-after=5', String(seconds), command, ...args],
+  { cwd: root, env, encoding: 'utf8', timeout: (seconds + 10) * 1000, maxBuffer: 4000000 });
 const holdoutNames = ['test_case_sensitive_names_round_trip', 'test_case_sensitive_dotenv_list_get_consistency'];
 const anchorNames = ['test_naming_config_default', 'test_naming_config_with_prefix', 'test_naming_config_parse',
   'test_naming_handles_dots_and_slashes', 'test_env_provider_not_found', 'test_env_provider_reads_env',
@@ -24,7 +30,7 @@ const evaluator = async (policy, suite) => {
     const wins = items.filter(Boolean).length;
     return { primary: wins / items.length, noopRate: 1 - wins / items.length,
       costPerWin: m.elapsedSeconds / Math.max(wins, 1), itemWins: items,
-      regressed: !m.anchors.every(Boolean) || m.nodeExit !== 0 || m.workspaceExit !== 0 };
+      regressed: !m.anchors.every(Boolean) || m.coreExit !== 0 || m.nodeExit !== 0 || m.workspaceExit !== 0 };
   };
   // Both suites are slices of the same executed Rust test run. Reuse its
   // immutable measurement for this exact revision, not a simulated score.
@@ -32,16 +38,14 @@ const evaluator = async (policy, suite) => {
   const start = performance.now();
   if (![parent, head].includes(policy.revision)) throw Error('unexpected revision');
   git('switch', '--detach', policy.revision);
-  const run = spawnSync('cargo', ['test', '--locked', '--offline', '-p', 'llm-config-core', '--lib', '-j', '2'],
-    { cwd: root, env, encoding: 'utf8', timeout: 30000, maxBuffer: 4000000 });
+  const run = runBounded('cargo', ['test', '--locked', '--offline', '-p', 'llm-config-core', '--lib', '-j', '2'], budgets.core);
   const text = (run.stdout || '') + (run.stderr || '');
   const passed = name => text.includes(`providers::env::tests::${name} ... ok`);
   const seen = name => text.includes(`providers::env::tests::${name} ... `);
   if (![...holdoutNames, ...anchorNames].every(seen)) throw Error('expected Rust tests did not execute');
   const wins = holdoutNames.map(passed), anchors = anchorNames.map(passed);
-  const node = spawnSync('npm', ['test'], { cwd: root, env, encoding: 'utf8', timeout: 10000 });
-  const workspace = spawnSync('timeout', ['25', 'cargo', 'test', '--locked', '--offline', '--workspace', '-j', '2'],
-    { cwd: root, env, encoding: 'utf8', timeout: 28000, maxBuffer: 4000000 });
+  const node = runBounded('npm', ['test'], budgets.node);
+  const workspace = runBounded('cargo', ['test', '--locked', '--offline', '--workspace', '-j', '2'], budgets.workspace);
   measurements[policy.revision] = { holdout: wins, anchors, coreExit: run.status,
     nodeExit: node.status, workspaceExit: workspace.status, workspaceError: workspace.error?.message,
     coreOutput: text, workspaceOutput: (workspace.stdout || '') + (workspace.stderr || ''),
@@ -56,7 +60,7 @@ try {
     holdout: { id: 'case-sensitive-env-v1', items: holdoutNames }, anchor: { id: 'env-existing-and-default-v1', items: anchorNames },
     mutationTargets: ['revision'], maxGenerations: 1, signer: fw.makeSigner(), dataSource: 'LIVE' });
   const replay = fw.verifyReplayBundle(result.replayBundle, { pinnedGateFingerprint: fw.gateFingerprint(fw.meetsPromotionRule) });
-  const report = { parent, head, measurements, gateFingerprint: fw.gateFingerprint(fw.meetsPromotionRule),
+  const report = { parent, head, budgets, measurements, gateFingerprint: fw.gateFingerprint(fw.meetsPromotionRule),
     replay: { pass: replay.pass, chainSummary: replay.chainSummary }, finalPolicy: result.finalPolicy,
     commits: result.replayBundle.all_commits.map(c => ({ verdict: c.verdict, failureReasons: c.failureReasons, primaryDelta: c.primaryDelta })),
     replayBundle: result.replayBundle };
