@@ -18,7 +18,17 @@ const anchorNames = ['test_naming_config_default', 'test_naming_config_with_pref
   'test_naming_handles_dots_and_slashes', 'test_env_provider_not_found', 'test_env_provider_reads_env',
   'test_dotenv_parsing', 'test_default_dotenv_prefix_remains_case_insensitive'];
 const measurements = {};
-const evaluator = async policy => {
+const evaluator = async (policy, suite) => {
+  const score = m => {
+    const items = suite.id === 'env-existing-and-default-v1' ? m.anchors : m.holdout;
+    const wins = items.filter(Boolean).length;
+    return { primary: wins / items.length, noopRate: 1 - wins / items.length,
+      costPerWin: m.elapsedSeconds / Math.max(wins, 1), itemWins: items,
+      regressed: !m.anchors.every(Boolean) || m.nodeExit !== 0 || m.workspaceExit !== 0 };
+  };
+  // Both suites are slices of the same executed Rust test run. Reuse its
+  // immutable measurement for this exact revision, not a simulated score.
+  if (measurements[policy.revision]) return score(measurements[policy.revision]);
   const start = performance.now();
   if (![parent, head].includes(policy.revision)) throw Error('unexpected revision');
   git('switch', '--detach', policy.revision);
@@ -34,10 +44,9 @@ const evaluator = async policy => {
     { cwd: root, env, encoding: 'utf8', timeout: 28000, maxBuffer: 4000000 });
   measurements[policy.revision] = { holdout: wins, anchors, coreExit: run.status,
     nodeExit: node.status, workspaceExit: workspace.status, workspaceError: workspace.error?.message,
-    coreOutput: text, workspaceOutput: (workspace.stdout || '') + (workspace.stderr || '') };
-  return { primary: wins.filter(Boolean).length / wins.length, noopRate: 1 - wins.filter(Boolean).length / wins.length,
-    costPerWin: (performance.now() - start) / 1000 / Math.max(wins.filter(Boolean).length, 1),
-    itemWins: wins, regressed: !anchors.every(Boolean) || node.status !== 0 || workspace.status !== 0 };
+    coreOutput: text, workspaceOutput: (workspace.stdout || '') + (workspace.stderr || ''),
+    elapsedSeconds: (performance.now() - start) / 1000 };
+  return score(measurements[policy.revision]);
 };
 try {
   const result = await fw.runFlywheelGenerations({ rootPolicy: { revision: parent },
