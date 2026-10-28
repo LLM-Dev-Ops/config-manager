@@ -396,8 +396,13 @@ impl SecretProvider for VaultProvider {
 mod tests {
     use super::*;
 
+    // These two tests share process-global VAULT_* variables. Keep their
+    // setup/read/cleanup atomic while retaining all assertions and parallel CI.
+    static VAULT_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
     #[test]
     fn test_vault_config_from_env() {
+        let _guard = VAULT_ENV_LOCK.lock().unwrap();
         std::env::set_var("VAULT_ADDR", "https://vault.example.com:8200");
         std::env::set_var("VAULT_TOKEN", "s.test-token");
         std::env::set_var("VAULT_MOUNT", "kv");
@@ -421,6 +426,7 @@ mod tests {
 
     #[test]
     fn test_vault_config_approle() {
+        let _guard = VAULT_ENV_LOCK.lock().unwrap();
         std::env::set_var("VAULT_ADDR", "https://vault.example.com:8200");
         std::env::set_var("VAULT_ROLE_ID", "role-123");
         std::env::set_var("VAULT_SECRET_ID", "secret-456");
