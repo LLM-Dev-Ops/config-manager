@@ -1,0 +1,22 @@
+{
+  "task": "config-oct28a",
+  "baselineProduction": "fb68a328b59442c72418e2a2b34a646e3ecaf14b",
+  "baselineWithIdenticalFixtures": "a5e9522296ef1f2109dd49991d91591173e4e84b",
+  "resumedHead": "bf88d1373440d959d9a556074c6f55468275c9f5",
+  "objective": "Finish real full-workspace evaluation of the retained case-sensitive environment provider fix",
+  "frozenBeforeExecution": true,
+  "timeoutSeconds": { "core": 180, "workspace": 300, "node": 30 },
+  "application": "identical budgets, commands and fixtures for baseline and candidate",
+  "gate": {
+    "holdoutRequired": "2/2",
+    "anchorsRequired": "8/8",
+    "coreRequired": "all 100 tests pass; exit 0",
+    "workspaceRequired": "all unit, integration and doc tests; exit 0",
+    "nodeRequired": "31/31; exit 0",
+    "timeoutsAndMissingExecution": "fail closed",
+    "promotionRule": "unchanged @metaharness/flywheel meetsPromotionRule"
+  },
+  "mergeRequires": ["verified signed replay and promotion", "exact-head build, fmt, strict Clippy, policy, full-suite and security CI", "current main conflict check", "required approvals"],
+  "priorRejectedEvidence": "retained; previous 25-second workspace results are not reclassified as passing",
+  "notClaimed": ["new production behavior in this continuation", "latency or cost optimization", "delegated agent implementation"]
+}

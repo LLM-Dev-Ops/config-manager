@@ -94,7 +94,12 @@ impl EnvNamingConfig {
 
         // Strip prefix if present
         let name = if let Some(ref prefix) = self.prefix {
-            let prefix_with_sep = format!("{}{}", prefix.to_uppercase(), self.separator);
+            let prefix = if self.uppercase {
+                prefix.to_uppercase()
+            } else {
+                prefix.clone()
+            };
+            let prefix_with_sep = format!("{}{}", prefix, self.separator);
             name.strip_prefix(&prefix_with_sep)?.to_string()
         } else {
             name
@@ -103,7 +108,11 @@ impl EnvNamingConfig {
         // Split on separator
         let parts: Vec<&str> = name.splitn(2, &self.separator).collect();
         if parts.len() == 2 {
-            Some((parts[0].to_lowercase(), parts[1].to_lowercase()))
+            if self.uppercase {
+                Some((parts[0].to_lowercase(), parts[1].to_lowercase()))
+            } else {
+                Some((parts[0].to_string(), parts[1].to_string()))
+            }
         } else {
             None
         }
@@ -187,6 +196,13 @@ impl ConfigProvider for EnvProvider {
     ) -> ProviderResult<HashMap<String, ProviderValue>> {
         let mut result = HashMap::new();
         let ns_prefix = self.naming.build_name(namespace, "");
+        let prefix = prefix.map(|p| {
+            if self.naming.uppercase {
+                p.to_lowercase()
+            } else {
+                p.to_string()
+            }
+        });
 
         for (name, value) in std::env::vars() {
             let name_upper = if self.naming.uppercase {
@@ -198,8 +214,8 @@ impl ConfigProvider for EnvProvider {
             if name_upper.starts_with(&ns_prefix) {
                 if let Some((_, key)) = self.naming.parse_name(&name) {
                     // Apply prefix filter if specified
-                    if let Some(p) = prefix {
-                        if !key.starts_with(&p.to_lowercase()) {
+                    if let Some(ref p) = prefix {
+                        if !key.starts_with(p) {
                             continue;
                         }
                     }
@@ -405,12 +421,19 @@ impl ConfigProvider for DotEnvProvider {
 
         let mut result = HashMap::new();
         let ns_prefix = self.naming.build_name(namespace, "");
+        let prefix = prefix.map(|p| {
+            if self.naming.uppercase {
+                p.to_lowercase()
+            } else {
+                p.to_string()
+            }
+        });
 
         for (name, value) in cache.iter() {
             if name.starts_with(&ns_prefix) {
                 if let Some((_, key)) = self.naming.parse_name(name) {
-                    if let Some(p) = prefix {
-                        if !key.starts_with(&p.to_lowercase()) {
+                    if let Some(ref p) = prefix {
+                        if !key.starts_with(p) {
                             continue;
                         }
                     }
@@ -441,6 +464,65 @@ impl ConfigProvider for DotEnvProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_case_sensitive_names_round_trip() {
+        for prefix in [None, Some("MyApp".to_string())] {
+            let naming = EnvNamingConfig {
+                prefix,
+                uppercase: false,
+                ..Default::default()
+            };
+            let name = naming.build_name("Database", "HostName");
+            assert_eq!(
+                naming.parse_name(&name),
+                Some(("Database".to_string(), "HostName".to_string()))
+            );
+            if naming.prefix.is_some() {
+                assert!(naming.parse_name("MYAPP__Database__HostName").is_none());
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_case_sensitive_dotenv_list_get_consistency() {
+        use std::io::Write;
+        let mut file = tempfile::NamedTempFile::new().unwrap();
+        writeln!(file, "MyApp__Database__HostName=localhost").unwrap();
+        writeln!(file, "MyApp__Database__Other=excluded").unwrap();
+        let naming = EnvNamingConfig {
+            prefix: Some("MyApp".to_string()),
+            uppercase: false,
+            ..Default::default()
+        };
+        let provider = DotEnvProvider::with_config(file.path(), naming).unwrap();
+        let values = provider.list("Database", Some("Host")).await.unwrap();
+        assert_eq!(values.len(), 1);
+        for (key, listed) in values {
+            assert_eq!(key, "HostName");
+            assert_eq!(
+                provider.get("Database", &key).await.unwrap().value,
+                listed.value
+            );
+        }
+        assert!(provider
+            .list("Database", Some("host"))
+            .await
+            .unwrap()
+            .is_empty());
+        assert!(provider.list("database", None).await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_default_dotenv_prefix_remains_case_insensitive() {
+        use std::io::Write;
+        let mut file = tempfile::NamedTempFile::new().unwrap();
+        writeln!(file, "DATABASE__HOSTNAME=localhost").unwrap();
+        let provider = DotEnvProvider::from_file(file.path()).unwrap();
+        let values = provider.list("database", Some("HOST")).await.unwrap();
+        assert_eq!(values.len(), 1);
+        assert!(values.contains_key("hostname"));
+    }
 
     #[test]
     fn test_naming_config_default() {
