@@ -18,7 +18,7 @@ async function probe(root){
   };
   try{
     const holdout=[];
-    for(const [depth,arrays]of [[1800,false],[2500,false],[1200,true]]){
+    for(const [depth,arrays]of [[2800,false],[3000,false],[3200,false]]){
       let value=0;for(let i=0;i<depth;i++)value=arrays?[{child:value}]:{child:value};
       holdout.push(await check(`depth${depth}-arrays${arrays}`,{namespace:'app/depth',key:'deep',value},depth+3));
     }
