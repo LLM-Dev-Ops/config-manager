@@ -21,6 +21,7 @@ function measure(root,label){
   checks.fmt=run(root,label,'fmt','cargo',['+1.99.0','fmt','--all','--','--check'],30);
   checks.audit=run(root,label,'audit','cargo',['audit','--db','/home/ruv/.cargo/advisory-db','--file','Cargo.lock','--no-fetch','--json'],30);
   checks.npmAudit=run(root,label,'npm-audit','npm',['audit','--omit=dev','--json'],30);
+  checks.npmFullAudit=run(root,label,'npm-full-audit','npm',['audit','--json'],30);
   return {probe,checks};
 }
 (async()=>{
