@@ -8,10 +8,11 @@
   },
   "scripts": {
     "start": "npx @google-cloud/functions-framework --target=handler --port=8080",
-    "test": "node test/handler.test.js"
+    "test": "node test/handler.test.js && node test/depth-probe.cjs ."
   },
   "dependencies": {},
   "devDependencies": {
     "@google-cloud/functions-framework": "^3.4.0"
   }
 }
+
