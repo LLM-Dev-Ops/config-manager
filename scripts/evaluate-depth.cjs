@@ -9,7 +9,7 @@ for(const path of frozen) if(!fs.readFileSync(join(base,path)).equals(fs.readFil
 fs.mkdirSync(out+'.logs',{recursive:true});
 function run(root,label,key,command,args,seconds=45){
   const start=Date.now();
-  const r=spawnSync('timeout',['--kill-after=5',String(seconds),command,...args],{cwd:root,encoding:'utf8',maxBuffer:32*1024*1024,timeout:(seconds+10)*1000,env:{...process.env,CARGO_TARGET_DIR:'/tmp/config-nov01pm-target',CARGO_PROFILE_DEV_DEBUG:'0',CARGO_PROFILE_TEST_DEBUG:'0'}});
+  const r=spawnSync('timeout',['--kill-after=5',String(seconds),command,...args],{cwd:root,encoding:'utf8',maxBuffer:32*1024*1024,timeout:(seconds+10)*1000,env:{PATH:process.env.PATH,RUSTUP_HOME:'/home/ruv/.rustup',CARGO_HOME:'/tmp/config-nov01pm-cargo',TMPDIR:'/tmp',LANG:'C.UTF-8',npm_config_cache:'/tmp/config-nov01pm-npm',CARGO_TARGET_DIR:'/tmp/config-nov01pm-target',CARGO_PROFILE_DEV_DEBUG:'0',CARGO_PROFILE_TEST_DEBUG:'0'}});
   const stdout=r.stdout||'',stderr=r.stderr||'';
   fs.writeFileSync(join(out+'.logs',label+'-'+key+'.log'),stdout+stderr);
   return {command:['timeout','--kill-after=5',String(seconds),command,...args],exit:r.status,signal:r.signal,error:r.error?.message,ms:Date.now()-start,sha256:hash(stdout+stderr),pass:r.status===0&&!r.error&&!r.signal,stdout};
@@ -29,7 +29,8 @@ function measure(root,label){
   const rev=root=>execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
   const b=rev(base),h=rev(head),parentBytes=fs.readFileSync(join(base,'index.js'),'utf8');
   const score=(m,s)=>{const items=m.probe[s==='holdout'?'holdout':'anchors'];const primary=items.filter(x=>x.passed).length/items.length;return {primary,noopRate:1-primary,costPerWin:0,regressed:Object.values(m.checks).some(x=>!x.pass)};};
-  const result=await fw.runFlywheelGenerations({rootPolicy:{revision:b},proposer:async()=>({value:h,summary:'Replace recursive field counting with explicit worklist',inverse:{path:'index.js',parentBytes,sha256:hash(parentBytes)}}),evaluator:async(p,s)=>score(p.revision===b?baseline:candidate,s.id),holdout:{id:'holdout',items:candidate.probe.holdout.map(x=>x.name)},anchor:{id:'anchor',items:candidate.probe.anchors.map(x=>x.name)},mutationTargets:['revision'],maxGenerations:1,signer:fw.makeSigner(),promotionRule:fw.meetsPromotionRule,dataSource:'LIVE'});
+  const inverse={files:['index.js','Cargo.lock','package.json'].map(path=>{const parentBytes=fs.readFileSync(join(base,path),'utf8');return {path,parentBytes,sha256:hash(parentBytes)};})};
+  const result=await fw.runFlywheelGenerations({rootPolicy:{revision:b},proposer:async()=>({value:h,summary:'Iterative field counter and libz-sys advisory patch',inverse}),evaluator:async(p,s)=>score(p.revision===b?baseline:candidate,s.id),holdout:{id:'holdout',items:candidate.probe.holdout.map(x=>x.name)},anchor:{id:'anchor',items:candidate.probe.anchors.map(x=>x.name)},mutationTargets:['revision'],maxGenerations:1,signer:fw.makeSigner(),promotionRule:fw.meetsPromotionRule,dataSource:'LIVE'});
   const fingerprint=fw.gateFingerprint(fw.meetsPromotionRule),replay=fw.verifyReplayBundle(result.replayBundle,{pinnedGateFingerprint:fingerprint});
   for(const m of [baseline,candidate]) for(const c of Object.values(m.checks)) delete c.stdout;
   fs.writeFileSync(out,JSON.stringify({baselineRevision:b,candidateRevision:h,frozen: frozen.map(path=>({path,sha256:hash(fs.readFileSync(join(head,path)))})),baseline,candidate,result,fingerprint,replay,rollback:{path:'index.js',parentBytes,sha256:hash(parentBytes)},limitations:'Real loopback HTTP, not deployed IAM/integration. No cost or latency claim; costPerWin=0 is neutral unmeasured and noopRate is failed-case fraction. Broad failures are regressions for promotion even when pre-existing.'},null,2));
