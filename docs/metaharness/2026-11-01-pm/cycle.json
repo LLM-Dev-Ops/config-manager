@@ -1,0 +1,233 @@
+{
+  "date": "2026-11-01",
+  "status": "BLOCKED",
+  "repo": "LLM-Dev-Ops/config-manager",
+  "pr": 4,
+  "baseline": "250db2f7490988807991add10a4063723868329e",
+  "candidate": "0753f8d7f4b69c6611c30f55af35ffff8be1e887",
+  "main": "85667ace35b905fdd4acf79f2db06c64e4738969",
+  "merged": false,
+  "changes": [
+    "Replace recursive countFields with explicit worklist preserving object/array/scalar totals",
+    "Run frozen depth probe in npm test",
+    "Pin libz-sys1.1.31 checksum167eea08ac9b4b34d10b6a331f5472e5734489ce Gitblob, addressing RUSTSEC-2026-0418",
+    "Minimal build environments and full npm audit in fail-closed evaluator"
+  ],
+  "coverage": {
+    "repositories": 58,
+    "openPRsBeforeCycle": 153,
+    "repositoryPagination": [
+      {
+        "offset": 0,
+        "returned": 58
+      },
+      {
+        "offset": 100,
+        "returned": 0
+      }
+    ],
+    "PRPagination": "100/page until exhausted for each repository",
+    "detailed": [
+      "config-manager"
+    ],
+    "deferred": [
+      "shield",
+      "test-bench",
+      "observatory",
+      "sentinel",
+      "memory-graph",
+      "latency-lens",
+      "forge",
+      "edge-agent",
+      "auto-optimizer",
+      "incident-manager",
+      "orchestrator",
+      "cost-ops",
+      "governance-dashboard",
+      "policy-engine",
+      "registry",
+      "marketplace",
+      "analytics-hub",
+      "schema-registry",
+      "connector-hub",
+      "copilot-agent",
+      "simulator",
+      "benchmark-exchange",
+      "inference-gateway",
+      "data-vault",
+      "research-lab",
+      "infra",
+      "integrations",
+      "ruvector-service",
+      "intelligence-core",
+      "security-core",
+      "automation-core",
+      "governance-core",
+      "data-core",
+      "ecosystem-core",
+      "research-core",
+      "interface-core",
+      "agentics-platform",
+      "agentics-diligence-artifacts",
+      "agentics-deployment-intent",
+      "agentics-simulation-planner",
+      "agentics-simulation-runner",
+      "agentics-deployment-exporters",
+      "agentics-org-manifests",
+      "agentics-cli",
+      "erp-surface",
+      "agentics-orchestration-engine",
+      "enterprise-roi-engine",
+      "agentics-contracts",
+      "agentics-results-index",
+      "agentics-usage-ledger",
+      "agentics-execution-engine",
+      "agentics-enforcement",
+      "platform-agents",
+      "agentics-cli-test",
+      "agentics-evolution",
+      "RuVector",
+      "agentics-dream-machine"
+    ]
+  },
+  "versions": {
+    "ruflo": "3.56.3",
+    "transformers": "4.3.1",
+    "metaharness": "0.4.2",
+    "darwin": "0.10.3",
+    "flywheel": "0.1.12",
+    "rust": "1.99.0",
+    "node": "20.20.2",
+    "npm": "10.8.2",
+    "OpenSSL": "3.0.13",
+    "docsRevision": "2f415bf47a7beb36f6a43c24e85a509acedf9ebb",
+    "recoveryCheckout": "6454d374a939f2b5f94709b6909f4251b7204252",
+    "recoveryUpstream": "83c4850c04d6243c1f700ec4a6a0e406a7d7198a",
+    "advisoryDB": "ee1a49a2769a24a596afc1c20cb33748d2769586"
+  },
+  "commands": {
+    "Ruflo": "node /home/ruv/.local/share/llm-dev-ops-tools/node_modules/ruflo/bin/ruflo.js swarm init --topology hierarchical --max-agents 1 --auto-scale false --with-permissions strict --format json",
+    "MetaHarness": "/home/ruv/.local/share/llm-dev-ops-tools/node_modules/.bin/metaharness score . --json",
+    "Darwin": "timeout --kill-after=5 90 /home/ruv/.local/share/llm-dev-ops-tools/node_modules/.bin/metaharness-darwin evolve . --generations 1 --children 1 --concurrency 1 --seed 2026110114 --risk-budget 0 --sandbox real --mutator deterministic",
+    "Flywheel": "node scripts/evaluate-depth.cjs /tmp/config-manager-nov01pm-base /tmp/config-manager-nov01pm-validated /home/ruv/.local/share/llm-dev-ops-tools /tmp/config-nov01pm-validated.json",
+    "learning": "RUFLO_MODEL_DIR=/home/ruv/.cache/llm-dev-ops-models timeout --kill-after=5 90 python3 /home/ruv/work/research-lab-runtime-recovery-20261016/scripts/offline-exec.py node --import /home/ruv/work/research-lab-runtime-recovery-20261016/scripts/ruflo-local-model.mjs /home/ruv/.local/share/llm-dev-ops-tools/node_modules/ruflo/bin/ruflo.js hooks post-task --task-id config-nov01pm --success false --quality 0.8 --agent codex --task ACTUAL_OUTCOME --store-results --format json"
+  },
+  "measurements": {
+    "holdout": "0/3→3/3 at depths2800/3000/3200",
+    "anchors": "3/3 both",
+    "originalNode": "31/31 both, original test bytes unchanged",
+    "trials": "Three per revision, identical pass fractions",
+    "frameworkIntegration": "Real installed Functions Framework: deep3000->200 correct3003 fields, health200, oversize413",
+    "cachedRustAdvisory": "1→0 after libz-sys1.1.31; require completed fresh-index audit before reporting exit0",
+    "fullNpmAudit": "8 findings:1critical3high4moderate; production0",
+    "Darwin": "NO_IMPROVEMENT, native baselinechild0.985 delta0; repo-test substrate not harness-sensitive",
+    "longRustTest": "354pass0fail10ignored at implementation6f10599; final0753differs only evaluator, exact-head evaluator still required"
+  },
+  "rejected": [
+    "Initial too-deep client fixture threw JSON.stringify RangeError; not scored",
+    "First reduced fixture passed3/3baseline and was not treated as improvement; final contract cases frozen before source fix",
+    "Initial offline Rust checks missing aead cache, retained as failures; public-only cache refreshed separately in /tmp",
+    "Build with inherited environment stopped after vulnerable libz/cc combination discovered; restarted with minimal environment",
+    "Checkout refused dirty own Cargo.lock; abandoned non-clean validation and used isolated exact-commit worktrees",
+    "Stale default Cargo index refused checking libz1.1.31 yanked status; raw output retained, not claimed clean audit",
+    "npm suggested major framework downgrade2.0.0; not accepted and no force used"
+  ],
+  "limits": [
+    "No delegated Ruflo tasks executed; coordinator initialization and real offline learning are not delegated implementation proof",
+    "Static MetaHarness fit/compileConfidence/estimated cost are heuristics, not executed build or paid-cost measurements",
+    "No cost/latency improvement claim, walltimes diagnostic",
+    "User Rust/TS/stateless IAM/GCP/RuVector CloudSQL constraints preserved by narrow handler+dependency changes; existing storage architecture not rewritten",
+    "Core-memory returned unscreened:true and no guidance; no unseen preference inferred",
+    "Branch protection admin read403, not repositorywrite denial; reviews empty; no safeguards bypassed"
+  ],
+  "rollback": "Restore index.js, package.json and Cargo.lock parent bytes from frozen baseline; inverse retains exact bytes and hashes. No deployed databases, migrations or services changed.",
+  "coordination": "One writer, atomic claim, isolated worktrees, expected_sha fast-forward leases. Original recovery branch is already incorporated in main via PR3; no open PR existed. Existing desktop found started and will be left started.",
+  "remaining": [
+    "Resolve8full npm audit findings without unsafe downgrade/force",
+    "Complete all real full test/security/approval gates before merge",
+    "Persistent disk ~349MiBfree; larger builds require storage maintenance",
+    "Rotate57deferred targets fairly"
+  ],
+  "CI": [
+    {
+      "id": 124950367176,
+      "name": "llm-config-devtools",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/LLM-Dev-Ops/config-manager/runs/124950367176"
+    },
+    {
+      "id": 124950208817,
+      "name": "Rust clippy",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/LLM-Dev-Ops/config-manager/actions/runs/41340813485/job/124950208817"
+    },
+    {
+      "id": 124950208753,
+      "name": "Rust test",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/LLM-Dev-Ops/config-manager/actions/runs/41340813485/job/124950208753"
+    },
+    {
+      "id": 124950208732,
+      "name": "Rust fmt",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/LLM-Dev-Ops/config-manager/actions/runs/41340813485/job/124950208732"
+    },
+    {
+      "id": 124950208665,
+      "name": "Rust build",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/LLM-Dev-Ops/config-manager/actions/runs/41340813485/job/124950208665"
+    },
+    {
+      "id": 124950208583,
+      "name": "Rust policy",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/LLM-Dev-Ops/config-manager/actions/runs/41340813485/job/124950208583"
+    },
+    {
+      "id": 124950207970,
+      "name": "Security Code Analysis",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/LLM-Dev-Ops/config-manager/actions/runs/41340813445/job/124950207970"
+    },
+    {
+      "id": 124950207917,
+      "name": "Node 20 tests and audit",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/LLM-Dev-Ops/config-manager/actions/runs/41340813480/job/124950207917"
+    },
+    {
+      "id": 124950207818,
+      "name": "Dependency Vulnerability Scan",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/LLM-Dev-Ops/config-manager/actions/runs/41340813445/job/124950207818"
+    }
+  ],
+  "finalResults": {
+    "RustTests": "354pass0fail10ignored both",
+    "build": 0,
+    "clippy": 0,
+    "fmt": 0,
+    "RustAudit": "1→0;candidateexit0",
+    "productionNpm": 0,
+    "fullNpm": "8including1critical",
+    "Flywheel": "0promotions,replay8/8",
+    "learning": "real384dim,4requiredflags true"
+  },
+  "claimReleased": true,
+  "rawReceipts": {
+    "decode": "cat receipts.part-*.b64 | base64 -d | gzip -d",
+    "sha256": "f10af5a823162ac3dd03899d8bfbd097fc90b64af1ecc12dad56b50bebb9ab36",
+    "bytes": 464142
+  }
+}
