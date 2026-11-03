@@ -36,3 +36,6 @@ jobs:
 
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
+
+      - name: Audit complete locked dependency tree
+        run: npm audit --audit-level=low

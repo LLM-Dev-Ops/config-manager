@@ -68,13 +68,17 @@ function jsonTypeName(value) {
 }
 
 function countFields(value) {
-  if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-    return Object.keys(value).length + Object.values(value).reduce((s, v) => s + countFields(v), 0);
+  // JSON may fit the byte limit while exceeding the JavaScript call stack.
+  // Use an explicit worklist so accepted nesting does not recurse per field.
+  const pending = [value];
+  let count = 0;
+  while (pending.length > 0) {
+    const current = pending.pop();
+    if (current === null || typeof current !== 'object') continue;
+    if (!Array.isArray(current)) count += Object.keys(current).length;
+    for (const child of Object.values(current)) pending.push(child);
   }
-  if (Array.isArray(value)) {
-    return value.reduce((s, v) => s + countFields(v), 0);
-  }
-  return 0;
+  return count;
 }
 
 function collectTopLevelKeys(obj) {
@@ -438,3 +442,4 @@ exports.handler = (req, res) => {
     ],
   });
 };
+
