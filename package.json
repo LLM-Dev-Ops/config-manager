@@ -8,11 +8,12 @@
   },
   "scripts": {
     "start": "npx @google-cloud/functions-framework --target=handler --port=8080",
-    "test": "node test/handler.test.js && node test/depth-probe.cjs ."
+    "test": "node test/handler.test.js && node test/depth-probe.cjs . && node test/framework-probe.cjs . && node test/cloudevents-compat.cjs"
   },
-  "dependencies": {},
   "devDependencies": {
-    "@google-cloud/functions-framework": "^3.4.0"
+    "@google-cloud/functions-framework": "5.0.5"
+  },
+  "overrides": {
+    "cloudevents": { "uuid": "11.1.1" }
   }
 }
-
