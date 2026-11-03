@@ -1,0 +1,299 @@
+{
+  "localRustTest": {
+    "completionVerified": true,
+    "completionVersion": 1,
+    "exitCode": 0,
+    "machineId": "8ee959f7363638",
+    "note": "Full shell access on your desktop. The ADR-043 literal filter catches obvious mistakes but is not a sandbox; the run is audited. Output is capped to the executor head; completionVerified requires executor-owned structured completion. Legacy completion, timeout, transport errors and signal termination have no verified exitCode.",
+    "status": "ok",
+    "stdout": "▶ run: cd /tmp/config-evening && git fetch origin metaharness/config-depth-20261101 && git merge --ff-only FETCH_HEAD && timeout --kill-after=3 45 cargo +1.99.0 test --workspace --all-features --locked >/tmp/config-evening-final-test.log 2>&1; echo FINAL_TEST_EXIT=$?; tail -7 /tmp/config-evening-final-test.log\n\nUpdating 39c4300..e10a3b1\nFast-forward\n .github/workflows/cloud-function-quality.yml |    3 +\n package-lock.json                            | 1017 ++++++++++++--------------\n package.json                                 |    9 +-\n test/cloudevents-compat.cjs                  |   10 +\n 4 files changed, 472 insertions(+), 567 deletions(-)\n create mode 100644 test/cloudevents-compat.cjs\nFINAL_TEST_EXIT=124\n   Compiling reqwest v0.12.28\n   Compiling which v6.0.3\n   Compiling cargo_metadata v0.18.1\n   Compiling ignore v0.4.33\n   Compiling llm-config-api v0.5.0 (/tmp/config-evening/crates/llm-config-api)\n   Compiling llm-config-audit v0.5.0 (/tmp/config-evening/crates/llm-config-audit)\n   Compiling llm-config-cache v0.5.0 (/tmp/config-evening/crates/llm-config-cache)\nFrom https://github.com/LLM-Dev-Ops/config-manager\n * branch            metaharness/config-depth-20261101 -> FETCH_HEAD\n   39c4300..e10a3b1  metaharness/config-depth-20261101 -> origin/metaharness/config-depth-20261101\n\n✓ SUCCESS in 45s · 19 lines\n📝 transcript: /home/ruv/.ruos/activity/2026-11-03/run-cd-tmp-config-evening-git-fetch-origin-metah-011149.log\n",
+    "timeoutSecs": 55
+  },
+  "localRustTest2": {
+    "completionVerified": true,
+    "completionVersion": 1,
+    "exitCode": 0,
+    "machineId": "8ee959f7363638",
+    "note": "Full shell access on your desktop. The ADR-043 literal filter catches obvious mistakes but is not a sandbox; the run is audited. Output is capped to the executor head; completionVerified requires executor-owned structured completion. Legacy completion, timeout, transport errors and signal termination have no verified exitCode.",
+    "status": "ok",
+    "stdout": "▶ run: cd /tmp/config-evening && node --input-type=module -e 'const m=await import(\"/home/ruv/.local/share/llm-dev-ops-tools/node_modules/@claude-flow/cli/dist/src/mcp-tools/agent-tools.js\");const ts=Object.values(m).filter(Array.isArray).flat();console.log(ts.map(t=>t.name).join(\" \"));for(const t of ts)if(/terminate|stop/.test(t.name))console.log(JSON.stringify(t.inputSchema));'; timeout --kill-after=3 25 cargo +1.99.0 test --workspace --all-features --locked >/tmp/config-evening-final-test2.log 2>&1; echo TEST2_EXIT=$?; tail -12 /tmp/config-evening-final-test2.log\n\nagent_spawn agent_execute agent_terminate agent_status agent_list agent_pool agent_health agent_update agent_logs\n{\"type\":\"object\",\"properties\":{\"agentId\":{\"type\":\"string\",\"description\":\"ID of agent to terminate\"},\"force\":{\"type\":\"boolean\",\"description\":\"Force immediate termination\"},\"promoteMemory\":{\"type\":\"boolean\",\"description\":\"When the agent has a per-agent COW memory branch (spawned with memoryBase), promote (merge) its edits into the shared base on terminate. Default false → discard the branch (throw its edits away). No-op when the agent has no branch.\"}},\"required\":[\"agentId\"]}\nTEST2_EXIT=124\n   Compiling cfg-if v1.0.5\n   Compiling mockall_derive v0.12.1\n   Compiling tokio-stream v0.1.19\n   Compiling fragile v2.1.0\n   Compiling downcast v0.11.0\n   Compiling unicode-width v0.2.2\n   Compiling console v0.15.11\n   Compiling mockall v0.12.1\n   Compiling tokio-test v0.4.6\n   Compiling llm-config-integration-tests v0.5.0 (/tmp/config-evening/crates/llm-config-integration-tests)\n   Compiling number_prefix v0.4.0\n   Compiling indicatif v0.17.11\n\n✓ SUCCESS in 25s · 15 lines\n📝 transcript: /home/ruv/.ruos/activity/2026-11-03/run-cd-tmp-config-evening-node-input-type-module-011317.log\n",
+    "timeoutSecs": 35
+  },
+  "localRustTest3AndBuild": {
+    "completionVerified": true,
+    "completionVersion": 1,
+    "exitCode": 0,
+    "machineId": "8ee959f7363638",
+    "note": "Full shell access on your desktop. The ADR-043 literal filter catches obvious mistakes but is not a sandbox; the run is audited. Output is capped to the executor head; completionVerified requires executor-owned structured completion. Legacy completion, timeout, transport errors and signal termination have no verified exitCode.",
+    "status": "ok",
+    "stdout": "▶ run: cd /tmp/config-evening && timeout --kill-after=3 30 cargo +1.99.0 test --workspace --all-features --locked >/tmp/config-evening-final-test3.log 2>&1; echo TEST3_EXIT=$?; tail -12 /tmp/config-evening-final-test3.log; cargo +1.99.0 fmt --all -- --check >/tmp/config-evening-fmt.log 2>&1; echo FMT_EXIT=$?; timeout --kill-after=3 15 cargo +1.99.0 build --workspace --all-features --locked >/tmp/config-evening-build.log 2>&1; echo BUILD_EXIT=$?; tail -3 /tmp/config-evening-build.log\n\nTEST3_EXIT=124\n   Compiling insta v1.49.0\n   Compiling protobuf v3.7.2\n   Compiling indicatif v0.17.11\n   Compiling llm-config-integration-tests v0.5.0 (/tmp/config-evening/crates/llm-config-integration-tests)\n   Compiling llm-config-storage v0.5.0 (/tmp/config-evening/crates/llm-config-storage)\n   Compiling prometheus v0.14.0\n   Compiling llm-config-metrics v0.5.0 (/tmp/config-evening/crates/llm-config-metrics)\n   Compiling llm-config-cli v0.5.0 (/tmp/config-evening/crates/llm-config-cli)\n   Compiling agentics-span v0.1.0 (/tmp/config-evening/crates/agentics-span)\n   Compiling llm-config-audit v0.5.0 (/tmp/config-evening/crates/llm-config-audit)\n   Compiling llm-config-templates v0.5.0 (/tmp/config-evening/crates/llm-config-templates)\n   Compiling llm-config-crypto v0.5.0 (/tmp/config-evening/crates/llm-config-crypto)\nFMT_EXIT=0\nBUILD_EXIT=124\n   Compiling fastrand v2.5.0\n   Compiling alloc-no-stdlib v3.0.0\n   Compiling clap_lex v1.1.1\n\n✓ SUCCESS in 45s · 18 lines\n📝 transcript: /home/ruv/.ruos/activity/2026-11-03/run-cd-tmp-config-evening-timeout-kill-after-3-3-011402.log\n",
+    "timeoutSecs": 55
+  },
+  "clippyAndFreshAudit": {
+    "completionVerified": true,
+    "completionVersion": 1,
+    "exitCode": 0,
+    "machineId": "8ee959f7363638",
+    "note": "Full shell access on your desktop. The ADR-043 literal filter catches obvious mistakes but is not a sandbox; the run is audited. Output is capped to the executor head; completionVerified requires executor-owned structured completion. Legacy completion, timeout, transport errors and signal termination have no verified exitCode.",
+    "status": "ok",
+    "stdout": "▶ run: cd /tmp/config-evening && timeout --kill-after=3 20 cargo +1.99.0 clippy --workspace --all-targets --all-features --locked -- -D warnings >/tmp/config-evening-clippy.log 2>&1; echo CLIPPY_EXIT=$?; tail -4 /tmp/config-evening-clippy.log; timeout --kill-after=3 15 cargo audit --json >/tmp/config-evening-rust-audit.json 2>/tmp/config-evening-rust-audit.err; echo AUDIT_EXIT=$?; node -e 'const fs=require(\"fs\");try{let r=JSON.parse(fs.readFileSync(\"/tmp/config-evening-rust-audit.json\"));console.log(JSON.stringify({database:r.database,count:r.vulnerabilities?.count,warnings:Object.fromEntries(Object.entries(r.warnings||{}).map(([k,v])=>[k,v.length]))}));}catch(e){console.log(e.message)}'; git -C /home/ruv/.cargo/advisory-db log -1 --format='%H %cI'; tail -3 /tmp/config-evening-rust-audit.err\n\nCLIPPY_EXIT=124\n    Checking async-compression v0.4.51\n    Checking console v0.15.11\n    Checking insta v1.49.0\n    Checking llm-config-audit v0.5.0 (/tmp/config-evening/crates/llm-config-audit)\nAUDIT_EXIT=0\n{\"database\":{\"advisory-count\":1402,\"last-commit\":\"263a4d951a0867d4bddc29dddd6d59427c78f9a7\",\"last-updated\":\"2026-11-02T12:45:44+01:00\"},\"count\":0,\"warnings\":{\"unmaintained\":4}}\n263a4d951a0867d4bddc29dddd6d59427c78f9a7 2026-11-02T12:45:44+01:00\n\n✓ SUCCESS in 21s · 8 lines\n📝 transcript: /home/ruv/.ruos/activity/2026-11-03/run-cd-tmp-config-evening-timeout-kill-after-3-2-011506.log\n",
+    "timeoutSecs": 45
+  },
+  "rufloAgent": {
+    "completionVerified": true,
+    "completionVersion": 1,
+    "exitCode": 0,
+    "machineId": "8ee959f7363638",
+    "note": "Full shell access on your desktop. The ADR-043 literal filter catches obvious mistakes but is not a sandbox; the run is audited. Output is capped to the executor head; completionVerified requires executor-owned structured completion. Legacy completion, timeout, transport errors and signal termination have no verified exitCode.",
+    "status": "ok",
+    "stdout": "▶ run: cd /tmp/config-evening && node /home/ruv/.local/share/llm-dev-ops-tools/node_modules/ruflo/bin/ruflo.js swarm init --topology hierarchical --max-agents 1 --auto-scale false --with-permissions strict --format json >/tmp/config-evening-ruflo.log 2>&1 && timeout --kill-after=3 20 node --input-type=module -e 'const m=await import(\"/home/ruv/.local/share/llm-dev-ops-tools/node_modules/@claude-flow/cli/dist/src/mcp-tools/agent-tools.js\");const ts=Object.values(m).filter(Array.isArray).flat();const t=n=>ts.find(x=>x.name===n);const id=\"config-evening-verifier\";try{console.log(\"SPAWN\",JSON.stringify(await t(\"agent_spawn\").handler({agentType:\"tester\",agentId:id,model:\"inherit\",task:\"Bounded verification of public config-manager dependency repair\"})));console.log(\"EXECUTE\",JSON.stringify(await t(\"agent_execute\").handler({agentId:id,prompt:\"Public config-manager evidence: npm audit 8 to 0; native HTTP anchors 8/8; existing 31 tests retained; Rust checks incomplete. State whether this evidence permits merge and identify missing gates. Do not use tools, files or the network, and do not invent results.\",maxTokens:64,temperature:0})));}finally{console.log(\"TERMINATE\",JSON.stringify(await t(\"agent_terminate\").handler({agentId:id})));}' >/tmp/config-evening-agent.log 2>&1; echo AGENT_EXIT=$?; tail -15 /tmp/config-evening-agent.log\n\nAGENT_EXIT=0\nSPAWN {\"success\":true,\"agentId\":\"config-evening-verifier\",\"agentType\":\"tester\",\"model\":\"inherit\",\"modelRoutedBy\":\"explicit\",\"status\":\"registered\",\"createdAt\":\"2026-11-03T01:14:01.340Z\",\"note\":\"Agent registered for coordination. Three execution paths: (1) call agent_execute(agentId, prompt) — direct LLM call via Anthropic Messages API (requires ANTHROPIC_API_KEY); (2) Claude Code Task tool — spawns a real subagent; (3) claude -p — headless background instance.\"}\nEXECUTE {\"success\":false,\"agentId\":\"config-evening-verifier\",\"model\":\"claude-sonnet-5\",\"error\":\"No LLM provider configured. Set ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN (Tier-3), OPENROUTER_API_KEY (#2042), or OLLAMA_API_KEY (Tier-2 — #1725).\",\"durationMs\":10,\"remediation\":\"Set one of ANTHROPIC_API_KEY, OPENROUTER_API_KEY (+ optional OPENROUTER_BASE_URL), or OLLAMA_API_KEY. Or set RUFLO_PROVIDER=openrouter|ollama to force a specific provider.\"}\nTERMINATE {\"success\":true,\"agentId\":\"config-evening-verifier\",\"terminated\":true,\"terminatedAt\":\"2026-11-03T01:14:01.362Z\"}\n\n✓ SUCCESS in 0s · 4 lines\n📝 transcript: /home/ruv/.ruos/activity/2026-11-03/run-cd-tmp-config-evening-node-home-ruv-local-sh-011400.log\n",
+    "timeoutSecs": 30
+  },
+  "learning": {
+    "completionVerified": true,
+    "completionVersion": 1,
+    "exitCode": 0,
+    "machineId": "8ee959f7363638",
+    "note": "Full shell access on your desktop. The ADR-043 literal filter catches obvious mistakes but is not a sandbox; the run is audited. Output is capped to the executor head; completionVerified requires executor-owned structured completion. Legacy completion, timeout, transport errors and signal termination have no verified exitCode.",
+    "status": "ok",
+    "stdout": "▶ run: cd /tmp/config-evening && RUFLO_MODEL_DIR=/home/ruv/.cache/llm-dev-ops-models timeout --kill-after=3 45 python3 /home/ruv/work/research-lab-runtime-recovery-20261016/scripts/offline-exec.py node --import /home/ruv/work/research-lab-runtime-recovery-20261016/scripts/ruflo-local-model.mjs /home/ruv/.local/share/llm-dev-ops-tools/node_modules/ruflo/bin/ruflo.js hooks post-task --task-id config-framework-20261102evening --success false --quality 0.8 --agent codex --task 'Forward Functions Framework upgrade removes eight npm findings; native HTTP and original tests retained; full Rust and configured Ruflo provider unavailable; no merge' --store-results --format json >/tmp/config-evening-learning.log 2>&1; echo LEARNING_EXIT=$?; tail -34 /tmp/config-evening-learning.log\n\nLEARNING_EXIT=0\nOffline local MiniLM model verified: 384 dimensions; remote loading disabled\n[INFO] Recording outcome for task: config-framework-20261102evening\nTransformers.js loaded: Xenova/all-MiniLM-L6-v2\n{\n  \"taskId\": \"config-framework-20261102evening\",\n  \"success\": false,\n  \"duration\": 933,\n  \"learningUpdates\": {\n    \"patternsUpdated\": 2,\n    \"newPatterns\": null,\n    \"trajectoryId\": null,\n    \"controller\": \"intelligence+bridge-store\",\n    \"outcomePersisted\": true,\n    \"available\": true\n  },\n  \"trajectory\": {\n    \"recorded\": true\n  },\n  \"quality\": 0.8,\n  \"pheromone\": {\n    \"active\": false,\n    \"reason\": \"no running pheromone-adaptive swarm\"\n  },\n  \"feedback\": {\n    \"recorded\": true,\n    \"controller\": \"intelligence+bridge-store\",\n    \"updates\": 2\n  },\n  \"timestamp\": \"2026-11-03T01:15:32.203Z\"\n}\n\n✓ SUCCESS in 2s · 31 lines\n📝 transcript: /home/ruv/.ruos/activity/2026-11-03/run-cd-tmp-config-evening-ruflo-model-dir-home-r-011529.log\n",
+    "timeoutSecs": 55
+  },
+  "cleanupBootstrap": {
+    "completionVerified": true,
+    "completionVersion": 1,
+    "exitCode": 0,
+    "machineId": "8ee959f7363638",
+    "note": "Full shell access on your desktop. The ADR-043 literal filter catches obvious mistakes but is not a sandbox; the run is audited. Output is capped to the executor head; completionVerified requires executor-owned structured completion. Legacy completion, timeout, transport errors and signal termination have no verified exitCode.",
+    "status": "ok",
+    "stdout": "▶ run: cd /tmp/config-evening && node /home/ruv/.local/share/llm-dev-ops-tools/node_modules/ruflo/bin/ruflo.js swarm stop --save-state; ps -eo pid,etime,args | grep -E 'cargo test|cargo build|cargo clippy|workflow run' | head -5; rmdir /tmp/config-evening-claim; bash /home/ruv/work/research-lab-runtime-recovery-20261016/scripts/bootstrap-ruos.sh >/tmp/config-evening-bootstrap-final.log 2>&1; echo BOOTSTRAP_VERIFIED_EXIT=$?; pkg-config --modversion openssl\n\n  Swarm state updated\n  MCP swarm stopped\n[OK] Swarm swarm-1793668441171-fmty4e stopped\n16424       00:00 sh -lc cd /tmp/config-evening && node /home/ruv/.local/share/llm-dev-ops-tools/node_modules/ruflo/bin/ruflo.js swarm stop --save-state; ps -eo pid,etime,args | grep -E 'cargo test|cargo build|cargo clippy|workflow run' | head -5; rmdir /tmp/config-evening-claim; bash /home/ruv/work/research-lab-runtime-recovery-20261016/scripts/bootstrap-ruos.sh >/tmp/config-evening-bootstrap-final.log 2>&1; echo BOOTSTRAP_VERIFIED_EXIT=$?; pkg-config --modversion openssl\n16440       00:00 grep -E cargo test|cargo build|cargo clippy|workflow run\nBOOTSTRAP_VERIFIED_EXIT=0\n3.0.13\n[INFO] Stopping swarm swarm-1793668441171-fmty4e...\n\n✓ SUCCESS in 0s · 8 lines\n📝 transcript: /home/ruv/.ruos/activity/2026-11-03/run-cd-tmp-config-evening-node-home-ruv-local-sh-011602.log\n",
+    "timeoutSecs": 20
+  },
+  "hostedCI": [
+    {
+      "id": 41558044884,
+      "name": "Cloud Function Quality",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/LLM-Dev-Ops/config-manager/actions/runs/41558044884"
+    },
+    {
+      "id": 41558044868,
+      "name": "Rust Quality",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/LLM-Dev-Ops/config-manager/actions/runs/41558044868"
+    },
+    {
+      "id": 41558044940,
+      "name": "Security Scan",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/LLM-Dev-Ops/config-manager/actions/runs/41558044940"
+    }
+  ],
+  "hostedRustJobs": [
+    {
+      "id": 125661630263,
+      "name": "Rust clippy",
+      "conclusion": "success",
+      "url": "https://github.com/LLM-Dev-Ops/config-manager/actions/runs/41558044868/job/125661630263"
+    },
+    {
+      "id": 125661630523,
+      "name": "Rust policy",
+      "conclusion": "success",
+      "url": "https://github.com/LLM-Dev-Ops/config-manager/actions/runs/41558044868/job/125661630523"
+    },
+    {
+      "id": 125661630577,
+      "name": "Rust build",
+      "conclusion": "success",
+      "url": "https://github.com/LLM-Dev-Ops/config-manager/actions/runs/41558044868/job/125661630577"
+    },
+    {
+      "id": 125661630806,
+      "name": "Rust fmt",
+      "conclusion": "success",
+      "url": "https://github.com/LLM-Dev-Ops/config-manager/actions/runs/41558044868/job/125661630806"
+    },
+    {
+      "id": 125661630861,
+      "name": "Rust test",
+      "conclusion": "success",
+      "url": "https://github.com/LLM-Dev-Ops/config-manager/actions/runs/41558044868/job/125661630861"
+    }
+  ],
+  "hostedRustTestTotals": {
+    "passed": 354,
+    "failed": 0,
+    "ignored": 10
+  },
+  "hostedRustTestResults": [
+    {
+      "passed": 16,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 16,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 15,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 13,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 19,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 100,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 11,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 25,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 8,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 12,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 21,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 57,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 8,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 27,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 10
+    },
+    {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    }
+  ]
+}
